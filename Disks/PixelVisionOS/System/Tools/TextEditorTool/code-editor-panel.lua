@@ -204,7 +204,7 @@ end
 
 function TextTool:OnHorizontalScroll(value)
 
-    print("Scroll", value)
+    -- print("Scroll", value)
     
     local charPos = math.ceil(((self.inputAreaData.maxLineWidth + 1) - (self.inputAreaData.tiles.w)) * value) + 1
 
@@ -216,7 +216,7 @@ function TextTool:OnHorizontalScroll(value)
 end
 
 function TextTool:OnVerticalScroll(value)
-    print("Scroll", value)
+    -- print("Scroll", value)
     local line = math.ceil((#self.inputAreaData.buffer - (self.inputAreaData.tiles.h - 1)) * value)
     if(self.inputAreaData.vy ~= line) then
         self.inputAreaData.vy = Clamp(line, 1, #self.inputAreaData.buffer)
@@ -243,11 +243,11 @@ function TextTool:DrawLineNumbers()
     end
 
     local offset = self.inputAreaData.vy - 1
-    local totalLines = self.inputAreaData.tiles.h
+    -- local totalLines = self.inputAreaData.tiles.h
     local padWidth = (self.lineWidth / 8) - 1
     for i = 1, self.inputAreaData.tiles.h do
 
-        DrawText(string.lpad(tostring(i + offset), padWidth, "0") .. " ", 1, 2 + i, DrawMode.Tile, "input", 44)
+        DrawText(string.lpad(tostring(i + offset), padWidth, "0") .. " ", 1, 2 + i, DrawMode.Tile, "large", 6)
 
     end
 

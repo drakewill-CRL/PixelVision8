@@ -26,6 +26,7 @@ using PixelVision8.Engine.Utils;
 using PixelVision8.Runner.Importers;
 using PixelVision8.Runner.Parsers;
 using PixelVision8.Runner.Utils;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -127,19 +128,31 @@ namespace PixelVision8.Runner.Services
             if ((saveFlags & SaveFlags.Fonts) == SaveFlags.Fonts)
             {
 
-                var paths = files.Where(s => s.EndsWith(".font.png")).ToArray();
+                // these are the defaul font names
+                var defaultFonts = new string[]{
+                    "large",
+                    "medium",
+                    "small",
+                };
+                
+                // Get the list of fonts in the directory
+                var paths = files.Where(s => s.EndsWith(".font.png")).ToList();
 
+                // Make sure the default fonts are either in the project or in /App/Fonts/*
+                foreach (var font in defaultFonts)
+                {
+                    if(paths.Contains("/Game/" + font + ".font.png") == false)
+                    {
+                        paths.Add("/App/Fonts/" + font + ".font.png");
+                    }
+                }
+
+                // Loop through each of the fonts and load them up
                 foreach (var fileName in paths)
                 {
-                    // var fontName = GetFileName(fileName).Split('.').First();
-
                     var imageParser = new PNGFileReader(fileName, _fileLoadHelper, targetEngine.ColorChip.maskColor);
 
                     AddParser(new FontParser(imageParser, targetEngine.ColorChip, targetEngine.FontChip));
-
-                    // parser = LoadFont(fontName, ReadAllBytes(fileName));
-                    // if (parser != null)
-                    //     AddParser(parser);
                 }
             }
 

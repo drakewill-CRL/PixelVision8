@@ -89,19 +89,20 @@ function WorkspaceTool:CreateDropDownMenu()
 
     -- end
 
+    -- print("Code Exists ", self.fileTemplatePath.AppendFile("code.lua"), self.fileTemplatePath)
     -- Add text options to the menu
     -- if(runnerName ~= PlayVersion and runnerName ~= DrawVersion and runnerName ~= TuneVersion) then
-    if(PathExists(self.fileTemplatePath.AppendFile("code.json"))) then
-        table.insert(menuOptions, addAt, {name = "New Code", action = function() self:OnNewFile("code", "lua") end, enabled = false, toolTip = "Run the current game."})
-        table.insert(self.newFileOptions, {name = "New Code"})
-        addAt = addAt + 1
-    end
+    -- if(PathExists(self.fileTemplatePath.AppendFile("code.lua"))) then
+    table.insert(menuOptions, addAt, {name = "New Code", action = function() self:CreateNewCodeFile() end, enabled = false, toolTip = "Run the current game."})
+    table.insert(self.newFileOptions, {name = "New Code"})
+    addAt = addAt + 1
+    -- end
 
-    if(PathExists(self.fileTemplatePath.AppendFile("json.json"))) then
-        table.insert(menuOptions, addAt, {name = "New JSON", action = function() self:OnNewFile("untitled", "json") end, enabled = false, toolTip = "Run the current game."})
-        table.insert(self.newFileOptions, {name = "New JSON"})
-        addAt = addAt + 1
-    end
+    -- if(PathExists(self.fileTemplatePath.AppendFile("json.json"))) then
+    table.insert(menuOptions, addAt, {name = "New JSON", action = function() self:OnNewFile("untitled", "json") end, enabled = false, toolTip = "Run the current game."})
+    table.insert(self.newFileOptions, {name = "New JSON"})
+    addAt = addAt + 1
+    -- end
 
     -- Add draw options
 
@@ -172,6 +173,102 @@ function WorkspaceTool:CreateDropDownMenu()
     end
 
     pixelVisionOS:CreateTitleBarMenu(menuOptions, "See menu options for this tool.")
+
+end
+
+function WorkspaceTool:CreateNewCodeFile(defaultPath)
+
+    local templatePath = NewWorkspacePath(ReadMetadata("RootPath", "/")).AppendDirectory(ReadMetadata("GameName", "untitled")).AppendDirectory("CodeTemplates")
+
+    defaultPath = defaultPath or self.currentPath
+
+    local fileName = "code"
+    local ext = ".lua"
+
+    local infoFilePath = defaultPath.AppendFile("info.json")
+
+    if(PathExists(infoFilePath)) then
+
+        local data = ReadJson(infoFilePath)
+
+        print(dump(data))
+
+        if(data["runnerType"] ~= nil) then
+            ext = data["runnerType"] ~= "lua" and  ".cs" or ".lua"
+        end
+
+    elseif(PathExists(defaultPath.AppendFile("code.cs"))) then
+
+        ext = ".cs"
+
+    end
+
+    local empty = PathExists(defaultPath.AppendFile(fileName .. ext))
+
+    print("Create new code file at", defaultPath, fileName, ext)
+
+    if(empty ~= true) then
+
+        local newPath = defaultPath.AppendFile(fileName .. ext)
+
+        print("Create file", templatePath.AppendFile("main-" .. fileName .. ext), "in", defaultPath.AppendFile(fileName .. ext))
+
+        CopyTo(templatePath.AppendFile("main-" .. fileName .. ext), newPath)
+
+        self:RefreshWindow(true)
+
+        self:SelectFile(newPath)
+
+    else
+
+        local newFileModal = self:GetNewFileModal()
+
+        newFileModal:SetText("New " .. (ext == ".cs" and "C# File" or "Lua"), "code", "Name code file", true)
+
+        pixelVisionOS:OpenModal(newFileModal,
+            function()
+
+                -- Check to see if ok was pressed on the model
+                if(newFileModal.selectionValue == true) then
+
+                    local newPath = UniqueFilePath(defaultPath.AppendFile(newFileModal.inputField.text .. ext))
+                    
+                    local templatePath = templatePath.AppendFile("empty-" .. fileName .. ext)
+
+                    -- TODO if this is a C# file, we need to rename the class
+                    if(ext == ".cs") then
+
+                        local codeTemplate = ReadTextFile(templatePath)
+
+                        local newClassName = newPath.EntityNameWithoutExtension:sub(1,1):upper() .. newPath.EntityNameWithoutExtension:gsub('%W',' '):gsub("%W%l", string.upper):sub(2):gsub('%W','') .. "Class"
+
+                        codeTemplate = codeTemplate:gsub( "CustomClass", newClassName)
+
+
+                        print("newClassName", newClassName)
+                        
+                        SaveTextToFile(newPath, codeTemplate)
+
+
+                    else
+
+                        -- Just copy the Lua template as is
+                        CopyTo(templatePath, newPath)
+
+                    end
+
+                    
+                    self:RefreshWindow(true)
+
+                    self:SelectFile(newPath)
+
+                end
+
+            end
+        )   
+
+        -- self:OnNewFile("code", "lua")
+    end
 
 end
 

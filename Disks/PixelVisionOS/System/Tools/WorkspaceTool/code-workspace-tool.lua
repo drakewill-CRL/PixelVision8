@@ -3,7 +3,7 @@ WorkspaceTool = {}
 WorkspaceTool.__index = WorkspaceTool
 
 
-LoadScript("pixel-vision-os-progress-modal-v1")
+LoadScript("pixel-vision-os-progress-modal-v2")
 LoadScript("pixel-vision-os-file-modal-v1")
 
 -- Import scripts needed by the workspace tool
@@ -93,11 +93,21 @@ function WorkspaceTool:RestoreLastPath()
   newPath = newPath == "none" and self.workspacePath or NewWorkspacePath(newPath)
 
   -- Open the window to the new path
-  if(newPath.Path == self.workspacePath.Path and #GetEntities(self.workspacePath) == 0) then
-    self:AutoCreateFirstProject()
-  else
-    self:OpenWindow(newPath, lastScrollPos, lastSelection)
+  if(newPath.Path == self.workspacePath.Path) then
+    
+    local files =  GetEntities(self.workspacePath)
+
+    if(#files == 0 or (#files == 1 and files[1] != "System")) then
+
+      self:AutoCreateFirstProject()
+    
+      return
+      
+    end
+    
   end
+
+  self:OpenWindow(newPath, lastScrollPos, lastSelection)
 
 end
 
