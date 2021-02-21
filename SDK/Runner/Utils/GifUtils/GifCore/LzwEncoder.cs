@@ -24,7 +24,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner.Gif
 {
     internal static class LzwEncoder
     {
@@ -45,7 +45,7 @@ namespace PixelVision8.Runner.Utils
             var dict = InitializeDictionary(minCodeSize);
             var clearCode = 1 << minCodeSize;
             var endOfInformation = clearCode + 1;
-            var code = new[] { colorIndexes[0] };
+            var code = new[] {colorIndexes[0]};
             var codeSize = minCodeSize + 1;
             var bits = new List<bool>();
 
@@ -65,7 +65,7 @@ namespace PixelVision8.Runner.Utils
                 else
                 {
                     ReadBits(dict[code], codeSize, ref bits);
-                    code = new[] { colorIndexes[i] };
+                    code = new[] {colorIndexes[i]};
 
                     if (dict.Count + 2 < 4096) // + CC + EoF
                     {
@@ -93,7 +93,7 @@ namespace PixelVision8.Runner.Utils
 
             for (var i = 0; i < 1 << minCodeSize; i++)
             {
-                dict.Add(new[] { (byte)i }, i);
+                dict.Add(new[] {(byte) i}, i);
             }
 
             return dict;
@@ -124,7 +124,7 @@ namespace PixelVision8.Runner.Utils
             {
                 if (bits[i])
                 {
-                    bytes[i >> 3] |= (byte)(1 << (i & 0x07));
+                    bytes[i >> 3] |= (byte) (1 << (i & 0x07));
                 }
             }
 

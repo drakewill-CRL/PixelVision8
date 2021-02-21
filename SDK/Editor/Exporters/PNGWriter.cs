@@ -19,7 +19,7 @@
 //
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Runner;
 //using PixelVisionRunner.Utils;
 using System;
 using System.Collections.Generic;
@@ -64,8 +64,8 @@ namespace PixelVision8.Runner.Exporters
             outputStream.Write(HeaderChunk.PngSignature, 0, HeaderChunk.PngSignature.Length);
             var buffer1 = new HeaderChunk
             {
-                Width = (uint)width1,
-                Height = (uint)height1,
+                Width = (uint) width1,
+                Height = (uint) height1,
                 BitDepth = 8,
                 ColorType = colorType,
                 CompressionMethod = 0,

@@ -24,7 +24,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner.Gif
 {
     internal class LogicalScreenDescriptor
     {
@@ -52,7 +52,8 @@ namespace PixelVision8.Runner.Utils
         }
 
         public LogicalScreenDescriptor(ushort logicalScreenWidth, ushort logicalScreenHeight,
-            byte globalColorTableFlag, byte colorResolution, byte sortFlag, byte gobalColorTableSize, byte backgroundColorIndex, byte pixelAspecRatio)
+            byte globalColorTableFlag, byte colorResolution, byte sortFlag, byte gobalColorTableSize,
+            byte backgroundColorIndex, byte pixelAspecRatio)
         {
             LogicalScreenWidth = logicalScreenWidth;
             LogicalScreenHeight = logicalScreenHeight;

@@ -18,10 +18,8 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine.Chips;
-using PixelVision8.Engine.Utils;
-using PixelVision8.Runner.Data;
-using PixelVision8.Runner.Parsers;
+using PixelVision8.Player;
+using PixelVision8.Runner;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +36,7 @@ namespace PixelVision8.Runner.Exporters
         public int[] ids;
         public int totalSpritesInTexture;
 
-        public SpriteDataParser(IImageParser parser, ColorChip colorChip, SpriteChip spriteChip) : base(parser,
+        public SpriteDataParser(IImageParser parser, ColorChip colorChip, SpriteChip spriteChip) : base("", parser,
             colorChip, spriteChip)
         {
         }
@@ -47,8 +45,8 @@ namespace PixelVision8.Runner.Exporters
         {
             // Get the total number of sprites
             //TODO this needs to be double checked at different size sprites
-            var cols = MathUtil.FloorToInt(image.Width / spriteChip.width);
-            var rows = MathUtil.FloorToInt(image.Height / spriteChip.height);
+            var cols = (int)Math.Floor((double)ImageData.Width / SpriteChip.DefaultSpriteSize);
+            var rows = (int)Math.Floor((double)ImageData.Height / SpriteChip.DefaultSpriteSize);
             totalSpritesInTexture = cols * rows;
 
             ids = Enumerable.Repeat(-1, totalSpritesInTexture).ToArray();
@@ -81,7 +79,8 @@ namespace PixelVision8.Runner.Exporters
         private SpriteChip spriteChip;
         private ColorChip colorChip;
 
-        public SpriteBuilderExporter(string fileName, ColorChip colorChip, SpriteChip spriteChip, Dictionary<string, byte[]> files) : base(fileName)
+        public SpriteBuilderExporter(string fileName, ColorChip colorChip, SpriteChip spriteChip,
+            Dictionary<string, byte[]> files) : base(fileName)
         {
             this.files = files;
             this.spriteChip = spriteChip;
@@ -94,16 +93,16 @@ namespace PixelVision8.Runner.Exporters
 
             spriteCount = 0;
 
-            _steps.Add(ConvertFilesToTextures);
+            Steps.Add(ConvertFilesToTextures);
 
             maxTilesPerLoop = 10;
             totalTiles = files.Count;
 
-            var loops = (int)Math.Ceiling((float)totalTiles / maxTilesPerLoop);
+            var loops = (int) Math.Ceiling((float) totalTiles / maxTilesPerLoop);
 
-            for (var i = 0; i < loops; i++) _steps.Add(ParseSpriteData);
+            for (var i = 0; i < loops; i++) Steps.Add(ParseSpriteData);
 
-            _steps.Add(GenerateSpriteJSON);
+            Steps.Add(GenerateSpriteJSON);
         }
 
 
@@ -127,7 +126,7 @@ namespace PixelVision8.Runner.Exporters
 
                 spriteParser.CalculateSteps();
 
-                while (spriteParser.completed == false) spriteParser.NextStep();
+                while (spriteParser.Completed == false) spriteParser.NextStep();
 
                 Array.Copy(spriteParser.ids, spriteData.ids, spriteParser.ids.Length);
 
@@ -193,7 +192,7 @@ namespace PixelVision8.Runner.Exporters
             sb.Append(endComment);
             sb.AppendLine();
 
-            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            Bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
             CurrentStep++;
         }

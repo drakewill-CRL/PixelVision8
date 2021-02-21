@@ -18,7 +18,7 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Runner.Utils;
+using PixelVision8.Runner;
 using PixelVision8.Runner.Workspace;
 using System.Collections.Generic;
 
@@ -28,7 +28,9 @@ namespace PixelVision8.Runner.Exporters
     {
         private long maxFileSize;
 
-        public DiskExporter(string fileName, IFileLoadHelper fileLoadHelper, Dictionary<WorkspacePath, WorkspacePath> srcFiles, long maxFileSize = 512, int compressionLevel = 0) : base(fileName, fileLoadHelper, srcFiles, compressionLevel)
+        public DiskExporter(string fileName, IFileLoader fileLoadHelper,
+            Dictionary<WorkspacePath, WorkspacePath> srcFiles, long maxFileSize = 512, int compressionLevel = 0) : base(
+            fileName, fileLoadHelper, srcFiles, compressionLevel)
         {
             this.maxFileSize = maxFileSize;
         }
@@ -37,24 +39,21 @@ namespace PixelVision8.Runner.Exporters
         {
             base.CalculateSteps();
 
-            _steps.Add(ValidateSize);
+            Steps.Add(ValidateSize);
             ;
         }
 
         private void ValidateSize()
         {
-
-            if ((bool)Response["success"])
+            if ((bool) Response["success"])
             {
-
                 // TODO need to add lib files to zip (but they are going to have different source and destination paths)
 
                 // Copy the file to the right location
-                var fileSize = (long)Response["fileSize"];
+                var fileSize = (long) Response["fileSize"];
 
                 if (fileSize > maxFileSize)
                 {
-
                     // Change the response message to reflect that the file is to big to save
                     Response["message"] =
                         "The game is too big to compile. You'll need to increase the game's size to create a new build with the current files.";
@@ -62,14 +61,11 @@ namespace PixelVision8.Runner.Exporters
                     // Set the success back to false
                     Response["success"] = false;
 
-                    bytes = null;
-
+                    Bytes = null;
                 }
-
             }
 
             StepCompleted();
         }
     }
-
 }

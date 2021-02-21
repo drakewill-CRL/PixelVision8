@@ -17,47 +17,45 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Player;
 
-namespace PixelVision8.Runner.Parsers
+namespace PixelVision8.Runner
 {
     public class WavParser : AbstractParser
     {
-        public string[] files;
-        public ISoundChip soundChip;
-        private IFileLoadHelper _fileLoadHelper;
-        public WavParser(string[] files, IFileLoadHelper fileLoadHelper, IEngine engine)
+        private readonly SoundChip _soundChip;
+        private readonly IFileLoader _fileLoadHelper;
+
+        public WavParser(string file, IFileLoader fileLoadHelper, SoundChip soundChip)
         {
             _fileLoadHelper = fileLoadHelper;
-            soundChip = engine.SoundChip;
-            this.files = files;
+            _soundChip = soundChip;
+            SourcePath = file;
         }
 
         public override void CalculateSteps()
         {
             base.CalculateSteps();
-            _steps.Add(ParseWavData);
-            _steps.Add(ConfigureSamples);
+            Steps.Add(ParseWavData);
         }
 
         public void ParseWavData()
         {
-            foreach (var file in files)
-            {
-                var name = _fileLoadHelper.GetFileName(file).Replace(".wav", "");
-                soundChip.AddSample(name, _fileLoadHelper.ReadAllBytes(file));
-            }
+            
+            var name = _fileLoadHelper.GetFileName(SourcePath).Replace(".wav", "");
+            _soundChip.AddSample(name, _fileLoadHelper.ReadAllBytes(SourcePath));
 
             CurrentStep++;
         }
 
-        public void ConfigureSamples()
-        {
-            soundChip.RefreshSamples();
+    }
 
-            CurrentStep++;
+    public partial class Loader
+    {
+        [FileParser(".wav", FileFlags.Sounds)]
+        public void ParseWave(string file, PixelVision engine)
+        {
+            AddParser(new WavParser(file, _fileLoadHelper, engine.SoundChip));
         }
     }
 }

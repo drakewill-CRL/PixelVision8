@@ -1,4 +1,4 @@
-﻿//   
+//   
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.  
 //  
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -18,19 +18,18 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Player;
+using PixelVision8.Runner;
 using System.Text;
 
 namespace PixelVision8.Runner.Exporters
 {
     public class SystemExporter : AbstractExporter
     {
-        private readonly IEngine engine;
+        private readonly PixelVision engine;
         private StringBuilder sb;
 
-        public SystemExporter(string fileName, IEngine engine) : base(fileName)
+        public SystemExporter(string fileName, PixelVision engine) : base(fileName)
         {
             this.engine = engine;
 
@@ -42,48 +41,48 @@ namespace PixelVision8.Runner.Exporters
             base.CalculateSteps();
 
             // Create a new string builder
-            _steps.Add(CreateStringBuilder);
+            Steps.Add(CreateStringBuilder);
 
             // TODO all chips should export
 
             // Serialize Color Chip
             if (engine.ColorChip != null)
-                _steps.Add(delegate { SerializeColorChip(engine.ColorChip); });
+                Steps.Add(delegate { SerializeColorChip(engine.ColorChip); });
 
             // Serialize Display
             if (engine.DisplayChip != null)
-                _steps.Add(delegate { SerializeDisplay(engine.DisplayChip); });
+                Steps.Add(delegate { SerializeDisplay(engine.DisplayChip); });
 
             //             Serialize Controller
             if (engine.ControllerChip != null)
-                _steps.Add(delegate { SerializeControllerChip(engine.ControllerChip); });
+                Steps.Add(delegate { SerializeControllerChip(engine.ControllerChip); });
 
             // Serialize Font
             if (engine.FontChip != null)
-                _steps.Add(delegate { SerializeFontChip(engine.FontChip); });
+                Steps.Add(delegate { SerializeFontChip(engine.FontChip); });
 
             // Serialize Game
             if (engine.GameChip != null)
-                _steps.Add(delegate { SerializeGameChip(((GameChip)engine.GameChip)); });
+                Steps.Add(delegate { SerializeGameChip(engine.GameChip); });
 
             // Serialize Music
-            if (((PixelVisionEngine)engine).MusicChip != null)
-                _steps.Add(delegate { SerializeMusicChip(((PixelVisionEngine)engine).MusicChip); });
+            if (engine.MusicChip != null)
+                Steps.Add(delegate { SerializeMusicChip(engine.MusicChip); });
 
             // Serialize Sound
-            if (engine.SoundChip != null/* && engine.SoundChip.export*/)
-                _steps.Add(delegate { SerializeSoundChip(engine.SoundChip as SfxrSoundChip); });
+            if (engine.SoundChip != null /* && engine.SoundChip.export*/)
+                Steps.Add(delegate { SerializeSoundChip(engine.SoundChip as SfxrSoundChip); });
 
             // Serialize Sprite
             if (engine.SpriteChip != null)
-                _steps.Add(delegate { SerializeSpriteChip(engine.SpriteChip); });
+                Steps.Add(delegate { SerializeSpriteChip(engine.SpriteChip); });
 
             // Serialize Tilemap
             if (engine.TilemapChip != null)
-                _steps.Add(delegate { SerializeTilemapChip(engine.TilemapChip); });
+                Steps.Add(delegate { SerializeTilemapChip(engine.TilemapChip); });
 
             // Save the final string builder
-            _steps.Add(CloseStringBuilder);
+            Steps.Add(CloseStringBuilder);
         }
 
         private void CreateStringBuilder()
@@ -112,7 +111,7 @@ namespace PixelVision8.Runner.Exporters
             sb.Append("}");
 
             //            Debug.Log("Save bytes");
-            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            Bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
             CurrentStep++;
         }
@@ -180,12 +179,12 @@ namespace PixelVision8.Runner.Exporters
             // JsonUtil.GetLineBreak(sb, 1);
 
             sb.Append("\"backgroundColor\":");
-            sb.Append(colorChip.backgroundColor);
+            sb.Append(colorChip.BackgroundColor);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             sb.Append("\"maskColor\":\"");
-            sb.Append(colorChip.maskColor);
+            sb.Append(colorChip.MaskColor);
             sb.Append("\"");
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
@@ -196,7 +195,7 @@ namespace PixelVision8.Runner.Exporters
             // JsonUtil.GetLineBreak(sb, 1);
 
             sb.Append("\"debug\":");
-            sb.Append(colorChip.debugMode.ToString().ToLower());
+            sb.Append(colorChip.DebugMode.ToString().ToLower());
 
             JsonUtil.GetLineBreak(sb);
             sb.Append("}");
@@ -205,7 +204,7 @@ namespace PixelVision8.Runner.Exporters
             CurrentStep++;
         }
 
-        private void SerializeControllerChip(IControllerChip controllerChip)
+        private void SerializeControllerChip(ControllerChip controllerChip)
         {
             // if (controllerChip.export == false) return;
 
@@ -233,12 +232,12 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb, 1);
             // Mode
             sb.Append("\"unique\":");
-            sb.Append(fontChip.unique.ToString().ToLower());
+            sb.Append(fontChip.Unique.ToString().ToLower());
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             sb.Append("\"pages\":");
-            sb.Append(fontChip.pages);
+            sb.Append(fontChip.Pages);
 
             JsonUtil.GetLineBreak(sb);
             sb.Append("}");
@@ -337,7 +336,7 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb, 1);
 
             sb.Append("\"totalChannels\":");
-            sb.Append(soundChip.totalChannels);
+            sb.Append(soundChip.TotalChannels);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
@@ -348,13 +347,13 @@ namespace PixelVision8.Runner.Exporters
 
             sb.Append("\"channelTypes\":[");
 
-            var total = soundChip.totalChannels;
+            var total = soundChip.TotalChannels;
 
             for (var i = 0; i < total; i++)
             {
                 //                Console.WriteLine("Channel "+i +" type "+soundChip.ChannelType(i));
 
-                sb.Append((int)soundChip.ChannelType(i));
+                sb.Append((int) soundChip.ChannelType(i));
                 if (i < total - 1) sb.Append(",");
             }
 
@@ -380,35 +379,35 @@ namespace PixelVision8.Runner.Exporters
 
             // Max Sprite Count Value
             sb.Append("\"maxSpriteCount\":");
-            sb.Append(spriteChip.maxSpriteCount);
+            sb.Append(spriteChip.MaxSpriteCount);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             // Mode
             sb.Append("\"unique\":");
-            sb.Append(spriteChip.unique.ToString().ToLower());
+            sb.Append(spriteChip.Unique.ToString().ToLower());
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             // Mode
-            sb.Append("\"spriteWidth\":");
-            sb.Append(spriteChip.width);
-            sb.Append(",");
-            JsonUtil.GetLineBreak(sb, 1);
-
-            sb.Append("\"spriteHeight\":");
-            sb.Append(spriteChip.height);
-            sb.Append(",");
-            JsonUtil.GetLineBreak(sb, 1);
+            // sb.Append("\"spriteWidth\":");
+            // sb.Append(spriteChip.SpriteWidth);
+            // sb.Append(",");
+            // JsonUtil.GetLineBreak(sb, 1);
+            //
+            // sb.Append("\"spriteHeight\":");
+            // sb.Append(spriteChip.SpriteHeight);
+            // sb.Append(",");
+            // JsonUtil.GetLineBreak(sb, 1);
 
             sb.Append("\"pages\":");
-            sb.Append(spriteChip.pages);
+            sb.Append(spriteChip.Pages);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             // Height
             sb.Append("\"cps\":");
-            sb.Append(spriteChip.colorsPerSprite);
+            sb.Append(spriteChip.ColorsPerSprite);
 
             //            if (serializePixelData)
             //            {
@@ -447,13 +446,13 @@ namespace PixelVision8.Runner.Exporters
 
             // Columns
             sb.Append("\"columns\":");
-            sb.Append(tilemapChip.columns);
+            sb.Append(tilemapChip.Columns);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             // Rows
             sb.Append("\"rows\":");
-            sb.Append(tilemapChip.rows);
+            sb.Append(tilemapChip.Rows);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 

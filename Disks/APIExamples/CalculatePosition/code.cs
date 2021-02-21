@@ -11,11 +11,11 @@ Learn more about making Pixel Vision 8 games at
 https://www.pixelvision8.com/getting-started
 **/
 
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 
 namespace PixelVision8.Examples
 {
-    class CalculatePositionExample : GameChip
+    class ExampleGameChip : GameChip
     {
         // A 1D array of example values
         private string[] exampleGrid =

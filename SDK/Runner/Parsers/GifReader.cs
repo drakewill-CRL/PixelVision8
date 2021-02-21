@@ -19,12 +19,12 @@
 //
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Runner.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PixelVision8.Runner.Gif;
 
-namespace PixelVision8.Runner.Parsers
+namespace PixelVision8.Runner
 {
     class GifReader : AbstractParser
     {
@@ -40,26 +40,25 @@ namespace PixelVision8.Runner.Parsers
 
         public GifReader(byte[] bytes) : base()
         {
-            this.bytes = bytes;
+            this.Bytes = bytes;
         }
 
         public override void CalculateSteps()
         {
             base.CalculateSteps();
 
-            _steps.Add(CreateGif);
-            _steps.Add(DecodeGif);
-            _steps.Add(FinishDecoding);
+            Steps.Add(CreateGif);
+            Steps.Add(DecodeGif);
+            Steps.Add(FinishDecoding);
         }
 
         public void CreateGif()
         {
-            parser = new GifParser(bytes);
+            parser = new GifParser(Bytes);
         }
 
         public void DecodeGif()
         {
-
             decoded = new Dictionary<ImageDescriptor, byte[]>();
             frameCount = parser.Blocks.Count(i => i is ImageDescriptor);
             // var decodeProgress = new DecodeProgress { FrameCount = frameCount };
@@ -70,7 +69,7 @@ namespace PixelVision8.Runner.Parsers
 
                 if (imageDescriptor == null) continue;
 
-                var data = (TableBasedImageData)parser.Blocks[i + 1 + imageDescriptor.LocalColorTableFlag];
+                var data = (TableBasedImageData) parser.Blocks[i + 1 + imageDescriptor.LocalColorTableFlag];
 
                 // ThreadPool.QueueUserWorkItem(context =>
                 // {
@@ -116,7 +115,6 @@ namespace PixelVision8.Runner.Parsers
         }
 
 
-
         private void FinishDecoding()
         {
             // var globalColorTable = parser.LogicalScreenDescriptor.GlobalColorTableFlag == 1 ? GetUnityColors(parser.GlobalColorTable) : null;
@@ -132,13 +130,14 @@ namespace PixelVision8.Runner.Parsers
             {
                 if (parser.Blocks[j] is GraphicControlExtension)
                 {
-                    gcExtension = (GraphicControlExtension)parser.Blocks[j];
+                    gcExtension = (GraphicControlExtension) parser.Blocks[j];
                 }
                 else if (parser.Blocks[j] is ImageDescriptor)
                 {
-                    var imageDescriptor = (ImageDescriptor)parser.Blocks[j];
+                    var imageDescriptor = (ImageDescriptor) parser.Blocks[j];
 
-                    if (imageDescriptor.InterlaceFlag == 1) throw new NotSupportedException("Interlacing is not supported!");
+                    if (imageDescriptor.InterlaceFlag == 1)
+                        throw new NotSupportedException("Interlacing is not supported!");
 
                     // var colorTable = imageDescriptor.LocalColorTableFlag == 1 ? GetUnityColors((ColorTable) parser.Blocks[j + 1]) : globalColorTable;
                     var colorIndexes = decoded[imageDescriptor];
@@ -164,9 +163,11 @@ namespace PixelVision8.Runner.Parsers
                             {
                                 state[i] = EmptyColor;
                             }
+
                             filled = true;
                             break;
-                        case DisposalMethod.RestoreToPrevious: // 'state' was already copied before decoding current frame
+                        case DisposalMethod.RestoreToPrevious
+                            : // 'state' was already copied before decoding current frame
                             filled = false;
                             break;
                         default:
@@ -178,7 +179,8 @@ namespace PixelVision8.Runner.Parsers
             // return new Gif(frames);
         }
 
-        private static GifFrame DecodeFrame(GraphicControlExtension extension, ImageDescriptor descriptor, byte[] colorIndexes, bool filled, int Width, int Height, Color[] state)
+        private static GifFrame DecodeFrame(GraphicControlExtension extension, ImageDescriptor descriptor,
+            byte[] colorIndexes, bool filled, int Width, int Height, Color[] state)
         {
             var frame = new GifFrame();
             var pixels = state;
@@ -187,7 +189,7 @@ namespace PixelVision8.Runner.Parsers
             if (extension != null)
             {
                 frame.Delay = extension.DelayTime / 100f;
-                frame.DisposalMethod = (DisposalMethod)extension.DisposalMethod;
+                frame.DisposalMethod = (DisposalMethod) extension.DisposalMethod;
 
                 if (frame.DisposalMethod == DisposalMethod.RestoreToPrevious)
                 {
@@ -209,7 +211,7 @@ namespace PixelVision8.Runner.Parsers
 
                     if (transparent && !filled) continue;
 
-                    var color = EmptyColor;//transparent ? EmptyColor : colorTable[colorIndex];
+                    var color = EmptyColor; //transparent ? EmptyColor : colorTable[colorIndex];
                     var fx = x + descriptor.ImageLeftPosition;
                     var fy = Height - y - 1 - descriptor.ImageTopPosition; // Y-flip
 
@@ -223,9 +225,5 @@ namespace PixelVision8.Runner.Parsers
 
             return frame;
         }
-
     }
-
-
-
 }

@@ -1,4 +1,4 @@
-﻿//   
+//   
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.  
 //  
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -18,9 +18,8 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Utils;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Player;
+using PixelVision8.Runner;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,10 +42,10 @@ namespace PixelVision8.Runner.Exporters
 
     public class TilemapJsonExporter : AbstractExporter
     {
-        private readonly IEngine targetEngine;
+        private readonly PixelVision targetEngine;
         private StringBuilder sb;
 
-        public TilemapJsonExporter(string fileName, IEngine targetEngine) : base(fileName)
+        public TilemapJsonExporter(string fileName, PixelVision targetEngine) : base(fileName)
         {
             this.targetEngine = targetEngine;
         }
@@ -56,16 +55,16 @@ namespace PixelVision8.Runner.Exporters
             base.CalculateSteps();
 
             // Create a new string builder
-            _steps.Add(CreateStringBuilder);
+            Steps.Add(CreateStringBuilder);
 
             // TODO need to see if there is a legacy flag
-            _steps.Add(SaveMapDataV1);
+            Steps.Add(SaveMapDataV1);
             // _steps.Add(SaveMapDataV2);
 
             // _steps.Add(SaveMapDataV1);
 
             // Save the final string builder
-            _steps.Add(CloseStringBuilder);
+            Steps.Add(CloseStringBuilder);
         }
 
 
@@ -107,13 +106,13 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb, 4);
 
 
-            var total = tilemapChip.total;
-            var cols = tilemapChip.columns;
+            var total = tilemapChip.Total;
+            var cols = tilemapChip.Columns;
             var tileCounter = 0;
 
             for (var i = 0; i < total; i++)
             {
-                var pos = MathUtil.CalculatePosition(i, cols);
+                var pos = Utilities.CalculatePosition(i, cols);
 
                 var tile = gameChip.Tile(pos.X, pos.Y);
 
@@ -221,13 +220,13 @@ namespace PixelVision8.Runner.Exporters
 
             // Width
             sb.Append("\"width\":");
-            sb.Append(tilemapChip.columns);
+            sb.Append(tilemapChip.Columns);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
             // Height
             sb.Append("\"height\":");
-            sb.Append(tilemapChip.rows);
+            sb.Append(tilemapChip.Rows);
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
@@ -281,7 +280,7 @@ namespace PixelVision8.Runner.Exporters
 
             // background color
             sb.Append("\"backgroundcolor\":");
-            sb.Append("\"" + colorChip.maskColor + "\"");
+            sb.Append("\"" + colorChip.MaskColor + "\"");
             sb.Append(",");
             JsonUtil.GetLineBreak(sb, 1);
 
@@ -292,7 +291,7 @@ namespace PixelVision8.Runner.Exporters
             {
                 {
                     "sprites.png",
-                    new SpriteVector(spriteChip.textureWidth, spriteChip.textureHeight, spriteChip.TotalSprites)
+                    new SpriteVector(spriteChip.TextureWidth, spriteChip.TextureHeight, spriteChip.TotalSprites)
                 }
             };
 
@@ -307,7 +306,7 @@ namespace PixelVision8.Runner.Exporters
 
                 // columns
                 sb.Append("\"columns\":");
-                sb.Append(spriteChip.textureWidth / spriteSize.X);
+                sb.Append(spriteChip.TextureWidth / spriteSize.X);
                 sb.Append(",");
                 JsonUtil.GetLineBreak(sb, 2);
 
@@ -374,7 +373,7 @@ namespace PixelVision8.Runner.Exporters
 
                 // transparentcolor
                 sb.Append("\"transparentcolor\":");
-                sb.Append("\"" + targetEngine.ColorChip.maskColor + "\"");
+                sb.Append("\"" + targetEngine.ColorChip.MaskColor + "\"");
                 JsonUtil.GetLineBreak(sb, 2);
 
                 // tilesets end
@@ -452,13 +451,13 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb, 4);
 
 
-            var total = tilemapChip.total;
-            var cols = tilemapChip.columns;
+            var total = tilemapChip.Total;
+            var cols = tilemapChip.Columns;
             var tileCounter = 0;
 
             for (var i = 0; i < total; i++)
             {
-                var pos = MathUtil.CalculatePosition(i, cols);
+                var pos = Utilities.CalculatePosition(i, cols);
 
                 var tile = gameChip.Tile(pos.X, pos.Y);
 
@@ -603,14 +602,14 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb);
             sb.Append("}");
 
-            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            Bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
             CurrentStep++;
         }
 
         public uint CreateGID(int id, bool flipH, bool flipV)
         {
-            var gid = (uint)id;
+            var gid = (uint) id;
 
             if (flipH) gid |= 1U << 31;
 

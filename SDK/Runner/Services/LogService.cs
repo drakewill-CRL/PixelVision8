@@ -18,7 +18,8 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine.Services;
+using PixelVision8.Player;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -36,7 +37,7 @@ namespace PixelVision8.Runner
     }
 }
 
-namespace PixelVision8.Runner.Services
+namespace PixelVision8.Runner
 {
     public class LogService : AbstractService
     {
@@ -64,7 +65,7 @@ namespace PixelVision8.Runner.Services
 
         public void UpdateLog(string logString, LogType type = LogType.Log, string stackTrace = "")
         {
-            var typeCharacter = logCharacters[(int)type];
+            var typeCharacter = logCharacters[(int) type];
 
             // Clear string builder
             sb.Clear();
@@ -84,7 +85,9 @@ namespace PixelVision8.Runner.Services
 
             if (logBuffer.Count > totalItems) logBuffer.RemoveAt(0);
 
-            Debug.WriteLine(sb.ToString());
+            // Debug.WriteLine(sb.ToString());
+
+            Console.WriteLine(sb.ToString());
 
             logBuffer.Add(sb.ToString());
         }

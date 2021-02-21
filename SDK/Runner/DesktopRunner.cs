@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.
 //
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -28,13 +28,9 @@ using Microsoft.Xna.Framework.Input;
 using MoonSharp.Interpreter;
 using MoonSharp.VsCodeDebugger;
 using MoonSharp.VsCodeDebugger.DebuggerLogic;
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Engine.Services;
-using PixelVision8.Runner.Data;
+using PixelVision8.Player;
 using PixelVision8.Runner.Editors;
-using PixelVision8.Runner.Services;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Runner;
 using PixelVision8.Runner.Workspace;
 using System;
 using System.Collections.Generic;
@@ -44,7 +40,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Buttons = PixelVision8.Engine.Chips.Buttons;
+using Buttons = PixelVision8.Player.Buttons;
 
 namespace PixelVision8.Runner
 
@@ -84,9 +80,11 @@ namespace PixelVision8.Runner
         public bool backKeyEnabled = true;
         public BiosService bios;
         protected WorkspacePath biosPath = WorkspacePath.Root.AppendDirectory("App").AppendFile("bios.json");
-        protected IControllerChip controllerChip;
+        protected KeyboardInputChip keyboardInputChip;
         protected string documentsPath;
+
         protected bool ejectingDisk;
+
         // public string[] GameFiles;
         protected GifExporter gifEncoder;
 
@@ -99,7 +97,6 @@ namespace PixelVision8.Runner
         protected Dictionary<string, string> nextMetaData;
         protected RunnerMode nextMode;
         protected string nextPathToLoad;
-        protected string rootPath;
         protected bool screenShotActive;
         protected float screenshotDelay = 200f;
         private ScreenshotService screenshotService;
@@ -115,7 +112,7 @@ namespace PixelVision8.Runner
         protected RunnerMode mode;
         protected bool displayProgress;
         private List<string> bootDisks = new List<string>();
-        private Dictionary<string, string> bootBios= new Dictionary<string, string>();
+        private Dictionary<string, string> bootBios = new Dictionary<string, string>();
 
         protected override bool RunnerActive
         {
@@ -128,30 +125,24 @@ namespace PixelVision8.Runner
         }
 
         // Default path to where PV8 workspaces will go
-        public DesktopRunner(string rootPath, string[] args = null)
+        public DesktopRunner(string rootPath, string[] args = null): base(rootPath)
         {
-            // Fix a bug related to parsing numbers in Europe, among other things
-            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
-            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
             ServiceManager = new ServiceManager();
-
-            this.rootPath = rootPath;
+            
             server = new MoonSharpVsCodeDebugServer(1985);
             server.Start();
 
-            if(args != null)
+            if (args != null)
                 ParseArguments(args);
-
         }
 
         private void ParseArguments(string[] args)
         {
+            if (args.Length == 0)
+                return;
 
-            if(args.Length == 0)
-            return;
-            
-            if(args.Length == 1 && args[0].EndsWith(".pv8") ? File.Exists(args[0]) : Directory.Exists(args[0]))
+            if (args.Length == 1 && args[0].EndsWith(".pv8") ? File.Exists(args[0]) : Directory.Exists(args[0]))
             {
                 bootDisks.Add(args[0]);
             }
@@ -165,18 +156,21 @@ namespace PixelVision8.Runner
                     var param = args[i * 2];
                     var val = args[i * 2 + 1];
 
-                    switch(param){
-
-                        case "-d": case "-disk":
+                    switch (param)
+                    {
+                        case "-d":
+                        case "-disk":
                             // Add disk to boot list
                             bootDisks.Add(val);
-                        break;
-                        case "-b": case "-bios":
+                            break;
+                        case "-b":
+                        case "-bios":
                             // TODO override path to user bios
-                        break;
-                        case "-w": case "-workspace":
+                            break;
+                        case "-w":
+                        case "-workspace":
                             // TODO override path to workspace
-                        break;
+                            break;
                         default:
                             // Loop through all the arguments and treat them as disk paths
                             for (int j = 0; j < args.Length; j++)
@@ -184,19 +178,15 @@ namespace PixelVision8.Runner
                                 bootDisks.Add(args[j]);
                             }
 
-                        break;
-
+                            break;
                     }
-
                 }
                 catch (System.Exception error)
                 {
                     Console.WriteLine("Issue with command line arguments");
                     throw;
                 }
-
             }
-
         }
 
         protected MoonSharpVsCodeDebugServer server;
@@ -220,26 +210,26 @@ namespace PixelVision8.Runner
             }
         }
 
-        public override List<string> DefaultChips
-        {
-            get
-            {
-                var chips = new List<string>
-                {
-                    typeof(ColorChip).FullName,
-                    typeof(SpriteChip).FullName,
-                    typeof(TilemapChip).FullName,
-                    typeof(FontChip).FullName,
-                    typeof(ControllerChip).FullName,
-                    typeof(DisplayChip).FullName,
-                    typeof(SfxrSoundChip).FullName,
-                    typeof(MusicChip).FullName
-                };
-
-                // Return the list of chips
-                return chips;
-            }
-        }
+        // public override List<string> DefaultChips
+        // {
+        //     get
+        //     {
+        //         var chips = new List<string>
+        //         {
+        //             typeof(ColorChip).FullName,
+        //             typeof(SpriteChip).FullName,
+        //             typeof(TilemapChip).FullName,
+        //             typeof(FontChip).FullName,
+        //             typeof(ControllerChip).FullName,
+        //             typeof(DisplayChip).FullName,
+        //             typeof(SfxrSoundChip).FullName,
+        //             typeof(MusicChip).FullName
+        //         };
+        //
+        //         // Return the list of chips
+        //         return chips;
+        //     }
+        // }
 
 
         protected string Documents => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -266,7 +256,6 @@ namespace PixelVision8.Runner
             loadService = new LoadService(new WorkspaceFileLoadHelper(workspaceService));
 
             Script.DefaultOptions.ScriptLoader = new ScriptLoaderUtil(workspaceService);
-
         }
 
         public override void ConfigureDisplayTarget()
@@ -276,7 +265,7 @@ namespace PixelVision8.Runner
                 .Split('x').Select(int.Parse)
                 .ToArray();
 
-            if (DisplayTarget == null) DisplayTarget = new DisplayTarget(_graphics, tmpRes[0], tmpRes[1]);
+            if (DisplayTarget == null) DisplayTarget = new ShaderDisplayTarget(Graphics, tmpRes[0], tmpRes[1]);
 
             Fullscreen(Convert.ToBoolean(
                 bios.ReadBiosData(BiosSettings.FullScreen.ToString(), "False")));
@@ -288,18 +277,19 @@ namespace PixelVision8.Runner
 
             Scale(Convert.ToInt32(bios.ReadBiosData(BiosSettings.Scale.ToString(), "1")));
 
-            if (((DisplayTarget)DisplayTarget).HasShader() == false)
+            if (((ShaderDisplayTarget) DisplayTarget).HasShader() == false)
             {
                 // Configure CRT shader
                 var shaderPath = WorkspacePath.Parse(bios.ReadBiosData(CRTSettings.CRTEffectPath.ToString(),
                     "/App/Effects/crt-lottes-mg.ogl.mgfxo"));
 
                 if (workspaceService.Exists(shaderPath))
-                    ((DisplayTarget)DisplayTarget).shaderPath = workspaceService.OpenFile(shaderPath, FileAccess.Read);
+                    ((ShaderDisplayTarget) DisplayTarget).shaderPath =
+                        workspaceService.OpenFile(shaderPath, FileAccess.Read);
             }
 
-
-            DisplayTarget.ResetResolution(tmpRes[0], tmpRes[1]);
+            if (ActiveEngine != null)
+                DisplayTarget.ResetResolution(ActiveEngine.DisplayChip.Width, ActiveEngine.DisplayChip.Height);
 
             // Configure the shader from the bios
             Brightness(Convert.ToSingle(bios.ReadBiosData(CRTSettings.Brightness.ToString(), "100")) / 100F);
@@ -344,7 +334,7 @@ namespace PixelVision8.Runner
 
         protected void ConfigureKeyboard()
         {
-            var targetEngine = _tmpEngine as PixelVisionEngine;
+            // var targetEngine = _tmpEngine as PixelVisionEngine;
 
             // Pass input mapping
             foreach (var keyMap in defaultKeys)
@@ -352,77 +342,89 @@ namespace PixelVision8.Runner
                 var rawValue = Convert.ToInt32(bios.ReadBiosData(keyMap.Key, keyMap.Value.ToString(), true));
                 var keyValue = rawValue;
 
-                targetEngine.SetMetadata(keyMap.Key, keyValue.ToString());
+                TmpEngine.SetMetadata(keyMap.Key, keyValue.ToString());
             }
+            
+            // TODO This was disabled so remapping the controllers will not work
 
+
+            var controller1 = TmpEngine.ControllerChip.GetController(0);
+
+            controller1.KeyboardMap[Buttons.Up] = (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1UpKey.ToString()));
+            controller1.KeyboardMap[Buttons.Right] = (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1RightKey.ToString()));
+            controller1.KeyboardMap[Buttons.Down] = (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1DownKey.ToString()));
+            controller1.KeyboardMap[Buttons.Left] = (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1LeftKey.ToString()));
+
+            
             var player1KeyboardMap = new Dictionary<Buttons, Keys>
             {
-                {Buttons.Up, (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1UpKey.ToString()))},
+                {Buttons.Up, (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1UpKey.ToString()))},
+                
+                
                 {
                     Buttons.Left,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1LeftKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1LeftKey.ToString()))
                 },
                 {
                     Buttons.Right,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1RightKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1RightKey.ToString()))
                 },
                 {
                     Buttons.Down,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1DownKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1DownKey.ToString()))
                 },
                 {
                     Buttons.Select,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1SelectKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1SelectKey.ToString()))
                 },
                 {
                     Buttons.Start,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1StartKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1StartKey.ToString()))
                 },
-                {Buttons.A, (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1AKey.ToString()))},
-                {Buttons.B, (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player1BKey.ToString()))}
+                {Buttons.A, (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1AKey.ToString()))},
+                {Buttons.B, (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player1BKey.ToString()))}
             };
-
+            
             var player2KeyboardMap = new Dictionary<Buttons, Keys>
             {
-                {Buttons.Up, (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2UpKey.ToString()))},
+                {Buttons.Up, (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2UpKey.ToString()))},
                 {
                     Buttons.Left,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2LeftKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2LeftKey.ToString()))
                 },
                 {
                     Buttons.Right,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2RightKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2RightKey.ToString()))
                 },
                 {
                     Buttons.Down,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2DownKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2DownKey.ToString()))
                 },
                 {
                     Buttons.Select,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2SelectKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2SelectKey.ToString()))
                 },
                 {
                     Buttons.Start,
-                    (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2StartKey.ToString()))
+                    (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2StartKey.ToString()))
                 },
-                {Buttons.A, (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2AKey.ToString()))},
-                {Buttons.B, (Keys) Enum.Parse(typeof(Keys), targetEngine.GetMetadata(InputMap.Player2BKey.ToString()))}
+                {Buttons.A, (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2AKey.ToString()))},
+                {Buttons.B, (Keys) Enum.Parse(typeof(Keys), TmpEngine.GetMetadata(InputMap.Player2BKey.ToString()))}
             };
-
-            _tmpEngine.ControllerChip.RegisterKeyInput(player1KeyboardMap, player2KeyboardMap);
-
+            
+            // TmpEngine.ControllerChip.RegisterKeyInput(player1KeyboardMap, player2KeyboardMap);
         }
 
-        public override void ActivateEngine(IEngine engine)
+        public override void ActivateEngine(PixelVision engine)
         {
             // At this point this game is fully configured so all chips are accessible for extra configuring
 
             if (mode == RunnerMode.Loading)
-                ((LuaGameChip)engine.GameChip).LuaScript.Globals["DebuggerAttached"] =
+                ((LuaGameChip) engine.GameChip).LuaScript.Globals["DebuggerAttached"] =
                     new Func<bool>(AwaitDebuggerAttach);
 
             // Save a reference to the controller chip so we can listen for special key events
-            controllerChip = engine.ControllerChip;
+            keyboardInputChip = engine.KeyboardInputChip;
 
             // Activate the game
             BaseActivateEngine(engine);
@@ -434,7 +436,7 @@ namespace PixelVision8.Runner
 
             if (connected == false && attachScript)
             {
-                var tempQualifier = (LuaGameChip)_tmpEngine.GameChip;
+                var tempQualifier = (LuaGameChip) TmpEngine.GameChip;
                 // Kick off the first game script file
                 tempQualifier.LoadScript(tempQualifier.DefaultScriptPath);
 
@@ -453,10 +455,10 @@ namespace PixelVision8.Runner
         protected void OnTextInput(object sender, TextInputEventArgs e)
         {
             // Pass this to the input chip
-            controllerChip.SetInputText(e.Character, e.Key);
+            keyboardInputChip.SetInputText(e.Character, e.Key);
         }
 
-        public virtual void BaseActivateEngine(IEngine engine)
+        public virtual void BaseActivateEngine(PixelVision engine)
         {
             if (engine == null) return;
 
@@ -465,7 +467,7 @@ namespace PixelVision8.Runner
 
             if (ActiveEngine?.GameChip is LuaGameChip)
             {
-                var tempQualifier = (LuaGameChip)ActiveEngine.GameChip;
+                var tempQualifier = (LuaGameChip) ActiveEngine.GameChip;
                 tempQualifier.LoadScript(tempQualifier.DefaultScriptPath);
             }
 
@@ -483,7 +485,18 @@ namespace PixelVision8.Runner
             // No ned to  call the base method since the logic is copied here
         }
 
-        protected override void ConfigureRunner()
+
+        public override void ResetResolution()
+        {
+            base.ResetResolution();
+
+            IsMouseVisible = false;
+            // Update the mouse to use the new monitor scale
+            var scale = ((ShaderDisplayTarget) DisplayTarget).Scale;
+            ActiveEngine.MouseInputChip.MouseScale(scale.X, scale.Y);
+        }
+
+        protected void ConfigureRunner()
         {
             // Save the session ID
             SessionId = DateTime.Now.ToString("yyyyMMddHHmmssffff");
@@ -491,7 +504,8 @@ namespace PixelVision8.Runner
             SystemVersion = bios.ReadBiosData(BiosSettings.SystemVersion.ToString(), "0.0.0", true);
             systemName = bios.ReadBiosData("SystemName", "PixelVision8", true);
 
-            base.ConfigureRunner();
+            // Configure the runner
+            ConfigureDisplayTarget();
 
             CreateLoadService();
 
@@ -523,18 +537,17 @@ namespace PixelVision8.Runner
             var actions = Enum.GetValues(typeof(ActionKeys)).Cast<ActionKeys>();
             foreach (var action in actions)
                 actionKeys[action] =
-                    (Keys)Convert.ToInt32(bios.ReadBiosData(action.ToString(), ((int)actionKeys[action]).ToString(),
+                    (Keys) Convert.ToInt32(bios.ReadBiosData(action.ToString(), ((int) actionKeys[action]).ToString(),
                         true));
         }
 
         protected void CreateWorkspaceService()
         {
-            
             // TODO use partial class to add in support for workspace APIs needed by tools
             workspaceServicePlus = new WorkspaceServicePlus(
                 new KeyValuePair<WorkspacePath, IFileSystem>(
                     WorkspacePath.Root.AppendDirectory("App"),
-                    new PhysicalFileSystem(rootPath)
+                    new PhysicalFileSystem(RootPath)
                 )
             );
 
@@ -557,7 +570,7 @@ namespace PixelVision8.Runner
             {
                 // Read the bios text
                 var biosText = workspaceService.ReadTextFromFile(biosPath);
-                
+
                 //
                 bios = new BiosService();
 
@@ -585,7 +598,6 @@ namespace PixelVision8.Runner
 
         protected virtual void ConfigureWorkspace()
         {
-
             // The following settings come directly from the Content/bios.json file included with the exe
 
             // Create a new mount point for the virtual file system
@@ -607,7 +619,6 @@ namespace PixelVision8.Runner
             // Loop through the list of directories, make sure they exist and create them
             foreach (var directory in requiredDirectories)
             {
-
                 // Create the path if it does not exist
                 if (!Directory.Exists(directory.Value)) Directory.CreateDirectory(directory.Value);
 
@@ -619,14 +630,14 @@ namespace PixelVision8.Runner
             workspaceService.MountFileSystems(mounts);
 
             // Check to see if the system bios exist
-            if(workspaceService.Exists(systemBiosPath) == false)
+            if (workspaceService.Exists(systemBiosPath) == false)
             {
                 // Create a new file for the system bios
                 var tmpBios = workspaceService.CreateFile(systemBiosPath);
                 tmpBios.Close();
 
                 // Write the default workspace path into the system bios
-                workspaceService.SaveTextToFile(systemBiosPath, "{\"workspacePath\":\""+Documents+"\"}");
+                workspaceService.SaveTextToFile(systemBiosPath, "{\"workspacePath\":\"" + Documents.Replace("\\","\\\\") + "\"}");
             }
 
             // Define PV8 disk extensions from the bios
@@ -650,7 +661,6 @@ namespace PixelVision8.Runner
             // The following settings are user configurable
             if (createWorkspace != "True")
             {
-
                 userBiosPath = WorkspacePath.Parse(systemBiosPath.Path);
                 return;
             }
@@ -702,7 +712,6 @@ namespace PixelVision8.Runner
                 workspaceServicePlus.MountWorkspace(workspaceName);
 
                 workspaceService.SetupLogFile(WorkspacePath.Parse(bios.ReadBiosData("LogFilePath", "/Tmp/Log.txt")));
-
             }
 
             workspaceServicePlus.RebuildWorkspace();
@@ -755,8 +764,6 @@ namespace PixelVision8.Runner
 
         protected override void Update(GameTime gameTime)
         {
-
-
             // while (Sdl.PollEvent(out ev) == 1)
             // {
             if (ActiveEngine == null || shutdown) return;
@@ -764,7 +771,7 @@ namespace PixelVision8.Runner
             // TODO make sure this order is correct or maybe it can be cleaned up
             if (screenShotActive)
             {
-                screenshotTime += _timeDelta;
+                screenshotTime += TimeDelta;
 
                 if (screenshotTime > screenshotDelay)
                 {
@@ -775,31 +782,31 @@ namespace PixelVision8.Runner
                 UpdateTitle();
             }
 
-            if (controllerChip.GetKeyDown(Keys.LeftControl) ||
-                controllerChip.GetKeyDown(Keys.LeftControl))
+            if (keyboardInputChip.GetKeyDown(Keys.LeftControl) ||
+                keyboardInputChip.GetKeyDown(Keys.LeftControl))
             {
-                if (controllerChip.GetKeyUp(actionKeys[ActionKeys.ScreenShotKey]))
+                if (keyboardInputChip.GetKeyUp(actionKeys[ActionKeys.ScreenShotKey]))
                 {
                     // Only take a screenshot when one isn't being saved
                     if (!screenShotActive)
                         screenShotActive = screenshotService.TakeScreenshot(ActiveEngine);
                 }
-                else if (controllerChip.GetKeyUp(actionKeys[ActionKeys.RecordKey]))
+                else if (keyboardInputChip.GetKeyUp(actionKeys[ActionKeys.RecordKey]))
                 {
                     if (Recording)
                         StopRecording();
                     else
                         StartRecording();
                 }
-                else if (controllerChip.GetKeyUp(actionKeys[ActionKeys.RestartKey]))
+                else if (keyboardInputChip.GetKeyUp(actionKeys[ActionKeys.RestartKey]))
                 {
-                    if (controllerChip.GetKeyDown(Keys.LeftShift) || controllerChip.GetKeyDown(Keys.RightShift))
+                    if (keyboardInputChip.GetKeyDown(Keys.LeftShift) || keyboardInputChip.GetKeyDown(Keys.RightShift))
                         AutoLoadDefaultGame();
                     else
                         ResetGame();
                 }
             }
-            else if (controllerChip.GetKeyUp(Keys.Escape) && backKeyEnabled)
+            else if (keyboardInputChip.GetKeyUp(Keys.Escape) && backKeyEnabled)
             {
                 Back();
             }
@@ -814,7 +821,14 @@ namespace PixelVision8.Runner
             {
                 DisplayError(ErrorCode.Exception,
                     new Dictionary<string, string>
-                        {{"@{error}", e is ScriptRuntimeException error ? error.DecoratedMessage : e.Message + e.StackTrace.Split("\r\n")[0]}}, e);
+                    {
+                        {
+                            "@{error}",
+                            e is ScriptRuntimeException error
+                                ? error.DecoratedMessage
+                                : e.Message + e.StackTrace.Split("\r\n")[0]
+                        }
+                    }, e);
             }
         }
 
@@ -826,13 +840,13 @@ namespace PixelVision8.Runner
                 if (screenShotActive)
                 {
                     // TODO need to figure out why this is not displaying white when a screen shot happens
-                    _graphics.GraphicsDevice.Clear(Color.White);
+                    Graphics.GraphicsDevice.Clear(Color.White);
                 }
                 else
                 {
                     base.Draw(gameTime);
 
-                    if (Recording) gifEncoder.AddFrame(_timeDelta / 1000f);
+                    if (Recording) gifEncoder.AddFrame(TimeDelta / 1000f);
                 }
 
                 workspaceServicePlus.SaveLog();
@@ -841,8 +855,14 @@ namespace PixelVision8.Runner
             {
                 DisplayError(ErrorCode.Exception,
                     new Dictionary<string, string>
-                        {{ "@{error}", e is ScriptRuntimeException error ? error.DecoratedMessage : e.Message + e.StackTrace.Split("\r\n")[0]}}, e);
-                
+                    {
+                        {
+                            "@{error}",
+                            e is ScriptRuntimeException error
+                                ? error.DecoratedMessage
+                                : e.Message + e.StackTrace.Split("\r\n")[0]
+                        }
+                    }, e);
             }
         }
 
@@ -893,10 +913,8 @@ namespace PixelVision8.Runner
             }
             else
             {
-
                 for (int i = 0; i < bootDisks.Count; i++)
                 {
-
                     // Force runner to auto run disk
                     autoRunEnabled = i == 0;
 
@@ -904,16 +922,13 @@ namespace PixelVision8.Runner
                     MountDisk(bootDisks[i]);
 
                     autoRunEnabled = true;
-
                 }
-                
             }
-
         }
 
         protected string GetErrorMessage(ErrorCode code)
         {
-            return bios.ReadBiosData(code.ToString(), "Error code " + (int)code);
+            return bios.ReadBiosData(code.ToString(), "Error code " + (int) code);
         }
 
         protected virtual void LoadError(Dictionary<string, string> metaData)
@@ -934,17 +949,17 @@ namespace PixelVision8.Runner
             {
                 var success = Load(nextPathToLoad, nextMode, nextMetaData);
 
-                var engine = ActiveEngine as PixelVisionEngine;
+                // var engine = ActiveEngine as PixelVisionEngine;
 
-                if(engine != null && ((PixelVisionEngine)_tmpEngine).MetaData.ContainsKey("runnerType"))
+                if (TmpEngine != null && TmpEngine.MetaData.ContainsKey("runnerType"))
                 {
-                    if(engine.MetaData.ContainsKey("runnerType"))
+                    if (TmpEngine.MetaData.ContainsKey("runnerType"))
                     {
-                        engine.MetaData["runnerType"] = ((PixelVisionEngine)_tmpEngine).MetaData["runnerType"];
+                        TmpEngine.MetaData["runnerType"] = TmpEngine.MetaData["runnerType"];
                     }
                     else
                     {
-                        engine.MetaData.Add("runnerType", ((PixelVisionEngine)_tmpEngine).MetaData["runnerType"]);
+                        TmpEngine.MetaData.Add("runnerType", TmpEngine.MetaData["runnerType"]);
                     }
                 }
 
@@ -953,7 +968,7 @@ namespace PixelVision8.Runner
                 if (success == false)
                 {
                     //                    loading = false;
-                    DisplayError(ErrorCode.LoadError, new Dictionary<string, string> { { "@{path}", nextPathToLoad } });
+                    DisplayError(ErrorCode.LoadError, new Dictionary<string, string> {{"@{path}", nextPathToLoad}});
                 }
                 else
                 {
@@ -1122,8 +1137,8 @@ namespace PixelVision8.Runner
 
                 base.ShutdownActiveEngine();
 
-                if (((GameChip)ActiveEngine.GameChip).SaveSlots > 0)
-                    SaveGameData("/Game/", ActiveEngine, SaveFlags.SaveData,
+                if ((ActiveEngine.GameChip).SaveSlots > 0)
+                    SaveGameData("/Game/", ActiveEngine, FileFlags.SaveData,
                         false);
 
                 // Save the active disk
@@ -1137,45 +1152,55 @@ namespace PixelVision8.Runner
             }
         }
 
-        public override IEngine CreateNewEngine(List<string> chips)
+        public PixelVision CreateNewEngine(List<string> chips)
         {
-            return new PixelVisionEngine(ServiceManager, chips.ToArray());
+            var tmpEngine = new PixelVision(chips.ToArray())
+            {
+                ServiceLocator = ServiceManager
+            };
+
+            return tmpEngine;
         }
+
+        List<string> defaultChips = new List<string>
+        {
+            typeof(ColorChip).FullName,
+            typeof(SpriteChip).FullName,
+            typeof(TilemapChip).FullName,
+            typeof(FontChip).FullName,
+            typeof(ControllerChip).FullName,
+            typeof(MouseInputChip).FullName,
+            typeof(KeyboardInputChip).FullName,
+            typeof(DisplayChip).FullName,
+            typeof(SfxrSoundChip).FullName,
+            typeof(MusicChip).FullName
+        };
 
         public void ConfigureEngine(Dictionary<string, string> metaData = null)
         {
-
             // Console.WriteLine("Configure Runner Type " + metaData["runnerType"]);
-            
+
             // LuaMode = Array.IndexOf(GameFiles, "code.cs") == -1;
             if (metaData.ContainsKey("runnerType") && metaData["runnerType"] != "csharp")
             {
-
                 CreateLuaService();
 
-                var chips = DefaultChips;
-
-                // Add the Lua game chip
-                chips.Add(typeof(LuaGameChip).FullName);
-
-                // TODO need to move this to a base config engine method so the parent can be called
-
                 // Had to disable the active game manually before this is called so copied base logic here
-                _tmpEngine = CreateNewEngine(chips);
+                TmpEngine = CreateNewEngine(defaultChips);
 
-                // tmpEngine.Init();
+                // We need to add the Lua Game Chip after the other chips so the service locator is availible
+                TmpEngine.ActivateChip("GameChip", new LuaGameChip());
 
                 ConfigureServices();
 
                 // Pass all meta data into the engine instance
                 if (metaData != null)
                     foreach (var entry in metaData)
-                        ((PixelVisionEngine)_tmpEngine).SetMetadata(entry.Key, entry.Value);
-
+                        TmpEngine.SetMetadata(entry.Key, entry.Value);
 
 
                 // Get a reference to the    Lua game
-                var game = _tmpEngine.GameChip as LuaGameChip;
+                var game = TmpEngine.GameChip as LuaGameChip;
 
                 // Get the script
                 var luaScript = game.LuaScript;
@@ -1186,7 +1211,7 @@ namespace PixelVision8.Runner
                 luaScript.Globals["StartNextPreload"] = new Action(StartNextPreload);
                 luaScript.Globals["PreloaderComplete"] = new Action(RunGame);
                 luaScript.Globals["ReadPreloaderPercent"] =
-                    new Func<int>(() => (int)MathHelper.Clamp(loadService.Percent * 100, 0, 100));
+                    new Func<int>(() => (int) MathHelper.Clamp(loadService.Percent * 100, 0, 100));
 
                 // }else
                 if (mode == RunnerMode.Booting)
@@ -1206,7 +1231,7 @@ namespace PixelVision8.Runner
                     bios.ReadBiosData(key, defaultValue));
                 luaScript.Globals["WriteBiosData"] = new Action<string, string>(bios.UpdateBiosData);
 
-                luaScript.Globals["ControllerConnected"] = new Func<int, bool>(_tmpEngine.ControllerChip.IsConnected);
+                luaScript.Globals["ControllerConnected"] = new Func<int, bool>(IsControllerConnected);
 
 
                 // Get a reference to the Lua game
@@ -1227,7 +1252,7 @@ namespace PixelVision8.Runner
                     luaScript.Globals["ReadExportMessage"] =
                         new Func<Dictionary<string, object>>(ExportService.ReadExportMessage);
                     luaScript.Globals["ShutdownSystem"] = new Action(ShutdownSystem);
-                    luaScript.Globals["QuitCurrentTool"] = (QuitCurrentToolDelagator)QuitCurrentTool;
+                    luaScript.Globals["QuitCurrentTool"] = (QuitCurrentToolDelagator) QuitCurrentTool;
                     luaScript.Globals["RefreshActionKeys"] = new Action(RefreshActionKeys);
                     luaScript.Globals["DocumentPath"] = new Func<string>(() => documentsPath);
                     luaScript.Globals["TmpPath"] = new Func<string>(() => tmpPath);
@@ -1289,12 +1314,12 @@ namespace PixelVision8.Runner
             else
             {
                 // Had to disable the active game manually before this is called so copied base logic here
-                _tmpEngine = CreateNewEngine(DefaultChips);
+                TmpEngine = CreateNewEngine(defaultChips);
 
                 // Pass all meta data into the engine instance
                 if (metaData != null)
                     foreach (var entry in metaData)
-                        ((PixelVisionEngine)_tmpEngine).SetMetadata(entry.Key, entry.Value);
+                        TmpEngine.SetMetadata(entry.Key, entry.Value);
 
                 // ConfigureKeyboard();
                 // ConfiguredControllers();
@@ -1302,7 +1327,7 @@ namespace PixelVision8.Runner
 
             // TODO moved this out of the normal configuration order so make sure this still makes sense here
             ConfigureKeyboard();
-            ConfigureControllers();
+            // ConfigureControllers();
 
             // Make sure the current state of the system is saved back to the bios
             SaveBiosChanges();
@@ -1498,10 +1523,10 @@ namespace PixelVision8.Runner
                     ignoreExtension = metaData["runnerType"] == "csharp" ? ".lua" : ".cs";
                 }
                 // Read the game's meta file to see if the runner is defined there
-                else if(Array.IndexOf(GameFiles, "/Game/info.json") != -1)
+                else if (Array.IndexOf(GameFiles, "/Game/info.json") != -1)
                 {
-
-                    var json = workspaceService.ReadTextFromFile(WorkspacePath.Parse(GameFiles[Array.IndexOf(GameFiles, "/Game/info.json")]));
+                    var json = workspaceService.ReadTextFromFile(
+                        WorkspacePath.Parse(GameFiles[Array.IndexOf(GameFiles, "/Game/info.json")]));
 
                     var runnerType = "";
 
@@ -1510,30 +1535,28 @@ namespace PixelVision8.Runner
                     if (Json.Deserialize(json) is Dictionary<string, object> data && data.ContainsKey("runnerType"))
                     {
                         ignoreExtension = (string) data["runnerType"] == "csharp" ? ".lua" : ".cs";
-                        
-                        runnerType = (string) data["runnerType"];
-                        
-                        // Console.WriteLine("Info File Type " + runnerType);
 
+                        runnerType = (string) data["runnerType"];
+
+                        // Console.WriteLine("Info File Type " + runnerType);
                     }
                     else
                     {
                         // Check to see if there is a CS file because the engine will always default to that
-                        if(GameFiles.Where(p => p.EndsWith(".cs")).ToArray().Length > 0)
+                        if (GameFiles.Where(p => p.EndsWith(".cs")).ToArray().Length > 0)
                         {
-                            runnerType =  "csharp";
+                            runnerType = "csharp";
                             // Console.WriteLine("File Type " + runnerType);
-
                         }
                     }
 
-                    if(metaData.ContainsKey("runnerType") == true)
+                    if (metaData.ContainsKey("runnerType") == true)
                     {
-                        metaData["runnerType"] =  runnerType;
+                        metaData["runnerType"] = runnerType;
                     }
                     else
                     {
-                        metaData.Add("runnerType",  runnerType);
+                        metaData.Add("runnerType", runnerType);
                     }
                 }
 
@@ -1550,17 +1573,17 @@ namespace PixelVision8.Runner
                 ConfigureEngine(metaData);
 
                 // Path the full path to the engine's name  
-                _tmpEngine.Name = path;
+                TmpEngine.Name = path;
 
                 if (GameFiles != null)
                 {
                     // Read and Run the disk
-                    ProcessFiles(_tmpEngine, GameFiles, displayProgress);
+                    ProcessFiles(TmpEngine, GameFiles, displayProgress);
                     success = true;
                 }
                 else
                 {
-                    DisplayError(ErrorCode.LoadError, new Dictionary<string, string> { { "@{path}", path } });
+                    DisplayError(ErrorCode.LoadError, new Dictionary<string, string> {{"@{path}", path}});
                     success = false;
                 }
 
@@ -1580,13 +1603,13 @@ namespace PixelVision8.Runner
             return false;
         }
 
-        public void SaveGameData(string path, IEngine engine, SaveFlags saveFlags, bool useSteps = true)
+        public void SaveGameData(string path, PixelVision engine, FileFlags fileFlags, bool useSteps = true)
         {
             // Export the current game
 
             // TODO exporter needs a callback when its completed
             if (mode != RunnerMode.Error) //Was causing Roslyn games to wipe save data on any error.
-                ExportService.ExportGame(path, engine, saveFlags, useSteps);
+                ExportService.ExportGame(path, engine, fileFlags, useSteps);
         }
 
         protected override void OnExiting(object sender, EventArgs args)
@@ -1603,12 +1626,11 @@ namespace PixelVision8.Runner
             ServiceManager.AddService(typeof(GameDataExportService).FullName, ExportService);
         }
 
-        public void ProcessFiles(IEngine tmpEngine, string[] files, bool displayProgress = false)
+        public void ProcessFiles(PixelVision tmpEngine, string[] files, bool displayProgress = false)
         {
             // var csFilePaths = files.Where(p => p.EndsWith(".cs")).ToArray();
             if (tmpEngine.GameChip == null)
             {
-
                 //Roslyn mode.
                 BuildRoslynGameChip(files.Where(p => p.EndsWith(".cs")).ToArray());
             }
@@ -1616,7 +1638,7 @@ namespace PixelVision8.Runner
             // base.ProcessFiles(tmpEngine, files, displayProgress);
             this.displayProgress = displayProgress;
 
-            this._tmpEngine = tmpEngine;
+            TmpEngine = tmpEngine;
 
             ParseFiles(files);
 
@@ -1627,31 +1649,30 @@ namespace PixelVision8.Runner
             }
         }
 
-        public void ParseFiles(string[] files, IEngine engine, SaveFlags saveFlags,
+        public void ParseFiles(string[] files, PixelVision engine, FileFlags fileFlags,
             bool autoLoad = true)
         {
-            loadService.ParseFiles(files, engine, saveFlags);
+            loadService.ParseFiles(files, engine, fileFlags);
 
             if (autoLoad) loadService.LoadAll();
         }
 
-        protected void ParseFiles(string[] files, SaveFlags? flags = null)
+        protected void ParseFiles(string[] files, FileFlags? flags = null)
         {
             if (!flags.HasValue)
             {
-                flags = SaveFlags.System;
-                flags |= SaveFlags.Colors;
-                flags |= SaveFlags.ColorMap;
-                flags |= SaveFlags.Sprites;
-                flags |= SaveFlags.Tilemap;
-                flags |= SaveFlags.Fonts;
-                flags |= SaveFlags.Sounds;
-                flags |= SaveFlags.Music;
-                flags |= SaveFlags.SaveData;
-                flags |= SaveFlags.MetaSprites;
+                flags = FileFlags.System;
+                flags |= FileFlags.Colors;
+                flags |= FileFlags.Sprites;
+                flags |= FileFlags.Tilemap;
+                flags |= FileFlags.Fonts;
+                flags |= FileFlags.Sounds;
+                flags |= FileFlags.Music;
+                flags |= FileFlags.SaveData;
+                flags |= FileFlags.MetaSprites;
             }
 
-            loadService.ParseFiles(files, _tmpEngine, flags.Value);
+            loadService.ParseFiles(files, TmpEngine, flags.Value);
         }
 
         public void BuildRoslynGameChip(string[] files, bool buildDebugData = true)
@@ -1671,8 +1692,8 @@ namespace PixelVision8.Runner
 
             //Compilation options, should line up 1:1 with Visual Studio since it's the same underlying compiler.
             var options = new CSharpCompilationOptions(
-                OutputKind.DynamicallyLinkedLibrary, 
-                optimizationLevel: buildDebugData ?  OptimizationLevel.Debug : OptimizationLevel.Release, 
+                OutputKind.DynamicallyLinkedLibrary,
+                optimizationLevel: buildDebugData ? OptimizationLevel.Debug : OptimizationLevel.Release,
                 moduleName: "RoslynGame");
 
             //This list of references is what limits the user from breaking out of the PV8 limitations through Roslyn.
@@ -1685,8 +1706,9 @@ namespace PixelVision8.Runner
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Pixel Vision 8").Location),
-                MetadataReference.CreateFromFile(Assembly.Load("MonoGame.Framework").Location), 
-                MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location), //Required due to a .NET Standard 2.0 dependency somewhere.
+                MetadataReference.CreateFromFile(Assembly.Load("MonoGame.Framework").Location),
+                MetadataReference.CreateFromFile(Assembly.Load("netstandard")
+                    .Location), //Required due to a .NET Standard 2.0 dependency somewhere.
                 MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location), //required for Linq
                 MetadataReference.CreateFromFile(Assembly.Load("System.Linq").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("System.Linq.Expressions").Location),
@@ -1703,7 +1725,8 @@ namespace PixelVision8.Runner
                 debugInformationFormat: DebugInformationFormat.PortablePdb
             );
 
-            var compileResults = compiler.Emit( peStream: dllStream, pdbStream: pdbStream,  embeddedTexts:embeddedTexts, options: emitOptions);
+            var compileResults = compiler.Emit(peStream: dllStream, pdbStream: pdbStream, embeddedTexts: embeddedTexts,
+                options: emitOptions);
             if (compileResults.Success)
             {
                 dllStream.Seek(0, SeekOrigin.Begin);
@@ -1721,7 +1744,7 @@ namespace PixelVision8.Runner
                         {
                             "@{error}",
                             errors.Count > 0
-                                ? "Line " + lineNumber + " Pos " + charNumber  + ": " +  errors[0].GetMessage()
+                                ? "Line " + lineNumber + " Pos " + charNumber + ": " + errors[0].GetMessage()
                                 : "There was an unknown error trying to compile a C# file."
                         }
                     });
@@ -1729,24 +1752,29 @@ namespace PixelVision8.Runner
             }
 
             //Get the DLL into active memory so we can use it. Runtime errors will give the wrong line number if we're in Release mode, so don't include the pdbStream for that.
-            var loadedAsm = Assembly.Load(dllStream.ToArray(), buildDebugData ?  pdbStream.ToArray() : null);
+            var loadedAsm = Assembly.Load(dllStream.ToArray(), buildDebugData ? pdbStream.ToArray() : null);
 
             // TODO change this for net5.0
             // var roslynGameChipType = loadedAsm.GetTypes().Where(t => t.IsAssignableTo(typeof(GameChip))).FirstOrDefault();  //code.cs must use this namespace and class name.
-            
+
             // TODO this is only for net3.1
-            var roslynGameChipType = loadedAsm.GetTypes().Where(t => typeof(GameChip).IsAssignableFrom(t)).FirstOrDefault();
-        
+            var roslynGameChipType =
+                loadedAsm.GetTypes().Where(t => typeof(GameChip).IsAssignableFrom(t)).FirstOrDefault();
+
             //Could theoretically iterate over types until one that inherits from GameChip is found, but this strictness may be a better idea.
 
-            dllStream.Close(); dllStream.Dispose();
-            pdbStream.Close(); pdbStream.Dispose();
+            dllStream.Close();
+            dllStream.Dispose();
+            pdbStream.Close();
+            pdbStream.Dispose();
 
             Console.WriteLine("roslynGameChipType " + roslynGameChipType);
 
             if (roslynGameChipType != null)
             {
-                _tmpEngine.ActivateChip("GameChip", (AbstractChip)Activator.CreateInstance(roslynGameChipType)); //Inserts the DLL's GameChip descendent into the engine.
+                TmpEngine.ActivateChip("GameChip",
+                    (AbstractChip) Activator.CreateInstance(
+                        roslynGameChipType)); //Inserts the DLL's GameChip descendent into the engine.
             }
         }
 
@@ -1782,7 +1810,7 @@ namespace PixelVision8.Runner
             var metaData = lastGameRef.Value;
 
             // Merge values from the active game
-            foreach (var entry in ((PixelVisionEngine)ActiveEngine).MetaData)
+            foreach (var entry in ActiveEngine.MetaData)
                 if (metaData.ContainsKey(entry.Key))
                     metaData[entry.Key] = entry.Value;
                 else
@@ -1810,7 +1838,7 @@ namespace PixelVision8.Runner
                 return;
             }
 
-            DisplayError(ErrorCode.LoadError, new Dictionary<string, string> { { "@{path}", lastURI.Path } });
+            DisplayError(ErrorCode.LoadError, new Dictionary<string, string> {{"@{path}", lastURI.Path}});
         }
 
         public virtual void Back(Dictionary<string, string> metaData = null)
@@ -1913,7 +1941,7 @@ namespace PixelVision8.Runner
             workspaceService.UpdateLog(message);
 
             if (server?.GetDebugger() is AsyncDebugger debugger)
-                ((MoonSharpDebugSession)debugger.Client)?.SendText(message);
+                ((MoonSharpDebugSession) debugger.Client)?.SendText(message);
         }
 
         public void UpdateDiskInBios()
@@ -1974,6 +2002,8 @@ namespace PixelVision8.Runner
 
         private delegate void QuitCurrentToolDelagator(Dictionary<string, string> metaData, string tool = null);
 
+        public bool IsControllerConnected(int id) => TmpEngine.ControllerChip.GetController(MathHelper.Clamp(id, 0, 1)).IsConnected();
+        
         #region Runner settings
 
         /// <summary>
@@ -2033,18 +2063,30 @@ namespace PixelVision8.Runner
             return full;
         }
 
-        public override bool StretchScreen(bool? value = null)
+        public bool StretchScreen(bool? value = null)
         {
-            var stretch = base.StretchScreen(value);
+            if (value.HasValue)
+            {
+                ((ShaderDisplayTarget) DisplayTarget).StretchScreen = value.Value;
+                InvalidateResolution();
+            }
+
+            var stretch = ((ShaderDisplayTarget) DisplayTarget).StretchScreen;
 
             bios.UpdateBiosData(BiosSettings.StretchScreen.ToString(), stretch.ToString());
 
             return stretch;
         }
 
-        public override bool CropScreen(bool? value = null)
+        public bool CropScreen(bool? value = null)
         {
-            var crop = base.CropScreen(value);
+            if (value.HasValue)
+            {
+                ((ShaderDisplayTarget) DisplayTarget).CropScreen = value.Value;
+                InvalidateResolution();
+            }
+
+            var crop = ((ShaderDisplayTarget) DisplayTarget).CropScreen;
 
             bios.UpdateBiosData(BiosSettings.CropScreen.ToString(), crop.ToString());
 
@@ -2059,34 +2101,34 @@ namespace PixelVision8.Runner
         {
             if (toggle.HasValue)
             {
-                ((DisplayTarget)DisplayTarget).useCRT = toggle.Value;
+                ((ShaderDisplayTarget) DisplayTarget).useCRT = toggle.Value;
                 bios.UpdateBiosData(CRTSettings.CRT.ToString(), toggle.Value.ToString());
                 InvalidateResolution();
             }
 
-            return ((DisplayTarget)DisplayTarget).useCRT;
+            return ((ShaderDisplayTarget) DisplayTarget).useCRT;
         }
 
         public float Brightness(float? brightness = null)
         {
             if (brightness.HasValue)
             {
-                ((DisplayTarget)DisplayTarget).brightness = brightness.Value;
+                ((ShaderDisplayTarget) DisplayTarget).brightness = brightness.Value;
                 bios.UpdateBiosData(CRTSettings.Brightness.ToString(), (brightness * 100).ToString());
             }
 
-            return ((DisplayTarget)DisplayTarget).brightness;
+            return ((ShaderDisplayTarget) DisplayTarget).brightness;
         }
 
         public float Sharpness(float? sharpness = null)
         {
             if (sharpness.HasValue)
             {
-                ((DisplayTarget)DisplayTarget).sharpness = sharpness.Value;
+                ((ShaderDisplayTarget) DisplayTarget).sharpness = sharpness.Value;
                 bios.UpdateBiosData(CRTSettings.Sharpness.ToString(), sharpness.ToString());
             }
 
-            return ((DisplayTarget)DisplayTarget).sharpness;
+            return ((ShaderDisplayTarget) DisplayTarget).sharpness;
         }
 
         #endregion

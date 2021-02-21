@@ -21,7 +21,7 @@
 using Microsoft.Xna.Framework;
 // using ICSharpCode.SharpZipLib.Zip;
 // using ICSharpCode.SharpZipLib.Zip;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Runner;
 using PixelVision8.Runner.Workspace;
 using System;
 using System.Collections.Generic;
@@ -40,7 +40,8 @@ namespace PixelVision8.Runner.Exporters
         protected CompressionLevel compressionLevel;
 
 
-        public ZipExporter(string fileName, IFileLoadHelper fileLoadHelper, Dictionary<WorkspacePath, WorkspacePath> srcFiles, int compressionLevel = 0) : base(fileName)
+        public ZipExporter(string fileName, IFileLoader fileLoadHelper,
+            Dictionary<WorkspacePath, WorkspacePath> srcFiles, int compressionLevel = 0) : base(fileName)
         {
             SourceFiles = srcFiles.ToList();
 
@@ -48,21 +49,21 @@ namespace PixelVision8.Runner.Exporters
 
             ZipFs = new MemoryStream();
 
-            this.compressionLevel = (CompressionLevel)MathHelper.Clamp(compressionLevel, 0, 2);
+            this.compressionLevel = (CompressionLevel) MathHelper.Clamp(compressionLevel, 0, 2);
         }
 
         public override void CalculateSteps()
         {
             base.CalculateSteps();
 
-            _steps.Add(CreateZip);
+            Steps.Add(CreateZip);
 
             for (int i = 0; i < SourceFiles.Count; i++)
             {
-                _steps.Add(AddFile);
+                Steps.Add(AddFile);
             }
 
-            _steps.Add(CloseZip);
+            Steps.Add(CloseZip);
         }
 
         public override void LoadSourceData()
@@ -95,8 +96,9 @@ namespace PixelVision8.Runner.Exporters
                         var stream = new MemoryStream(FileLoadHelper.ReadAllBytes(srcFile.Path));
                         stream.CopyTo(entryStream);
                     }
-
                 }
+
+                // Console.WriteLine("Adding File " + file);
 
                 CurrentFile++;
 
@@ -108,13 +110,12 @@ namespace PixelVision8.Runner.Exporters
                 Response["success"] = false;
 
                 // Finish running the exporter since there was an error
-                CurrentStep = totalSteps;
+                CurrentStep = TotalSteps;
             }
         }
 
         public void CloseZip()
         {
-
             Response.Add("fileSize", ZipFs.Length / 1024);
             Response["success"] = true;
 
@@ -124,10 +125,12 @@ namespace PixelVision8.Runner.Exporters
 
             ZipFs.Seek(0, SeekOrigin.Begin);
 
-            bytes = ZipFs.ToArray();
+            Bytes = ZipFs.ToArray();
 
             // Archive.Close();
             ZipFs.Close();
+
+            // Console.WriteLine("Zip Closed");
 
             StepCompleted();
         }
@@ -140,5 +143,4 @@ namespace PixelVision8.Runner.Exporters
             ZipFs.Dispose();
         }
     }
-
 }

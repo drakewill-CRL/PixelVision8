@@ -18,21 +18,20 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Player;
+using PixelVision8.Runner;
 using System.Text;
 
 namespace PixelVision8.Runner.Exporters
 {
     public class SoundExporter : AbstractExporter
     {
-        private readonly IEngine targetEngine;
+        private readonly PixelVision _targetPlay;
         private StringBuilder sb;
 
-        public SoundExporter(string fileName, IEngine targetEngine) : base(fileName)
+        public SoundExporter(string fileName, PixelVision targetPlay) : base(fileName)
         {
-            this.targetEngine = targetEngine;
+            _targetPlay = targetPlay;
 
             //            CalculateSteps();
         }
@@ -42,18 +41,18 @@ namespace PixelVision8.Runner.Exporters
             base.CalculateSteps();
 
             // Create a new string builder
-            _steps.Add(CreateStringBuilder);
+            Steps.Add(CreateStringBuilder);
 
 
-            _steps.Add(SaveGameData);
+            Steps.Add(SaveGameData);
 
             // Save the final string builder
-            _steps.Add(CloseStringBuilder);
+            Steps.Add(CloseStringBuilder);
         }
 
         private void SaveGameData()
         {
-            var soundChip = targetEngine.SoundChip as SfxrSoundChip;
+            var soundChip = _targetPlay.SoundChip as SfxrSoundChip;
 
             sb.Append("\"version\":\"v2\",");
             JsonUtil.GetLineBreak(sb, 1);
@@ -132,7 +131,7 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb, 1);
             sb.Append("}");
 
-            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            Bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
             CurrentStep++;
         }

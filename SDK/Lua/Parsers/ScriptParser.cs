@@ -18,9 +18,9 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 
-namespace PixelVision8.Runner.Parsers
+namespace PixelVision8.Runner
 {
     public class ScriptParser : AbstractParser
     {
@@ -39,7 +39,7 @@ namespace PixelVision8.Runner.Parsers
         {
             base.CalculateSteps();
 
-            _steps.Add(LoadScript);
+            Steps.Add(LoadScript);
         }
 
         protected void LoadScript()

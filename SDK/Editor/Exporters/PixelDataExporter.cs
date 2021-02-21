@@ -19,7 +19,7 @@
 //
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Utils;
+using PixelVision8.Player;
 
 namespace PixelVision8.Runner.Exporters
 {
@@ -34,16 +34,16 @@ namespace PixelVision8.Runner.Exporters
         {
             this.paletteColors = paletteColors;
             this.pixelData = pixelData;
-            maskColor = ColorUtils.HexToColor(maskHex);
+            maskColor = DisplayTarget.HexToColor(maskHex);
         }
 
         public override void CalculateSteps()
         {
             CurrentStep = 0;
 
-            _steps.Add(CopyPixels);
+            Steps.Add(CopyPixels);
 
-            _steps.Add(WriteBytes);
+            Steps.Add(WriteBytes);
         }
 
         protected virtual void CopyPixels()

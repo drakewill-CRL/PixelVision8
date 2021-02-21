@@ -19,14 +19,13 @@
 //
 
 using MoonSharp.Interpreter;
-using PixelVision8.Engine.Utils;
 using PixelVision8.Runner.Exporters;
-using PixelVision8.Runner.Services;
+using PixelVision8.Runner;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using PixelVision8.Engine;
+using PixelVision8.Player;
 
 namespace PixelVision8
 {
@@ -47,7 +46,6 @@ namespace PixelVision8
 
         public BackgroundScriptRunner(string scriptName, LuaService luaService, string[] args = null) : base(null)
         {
-
             LuaScript.DoFile(scriptName);
 
             // Add all of the core File System APIs to the scrip
@@ -56,9 +54,9 @@ namespace PixelVision8
             LuaScript.Globals["args"] = args.Clone();
             LuaScript.Globals["AddStep"] = new Action<string>(AddStep);
             LuaScript.Globals["SetStringAsData"] = new Action<string>(SetStringAsData);
-            LuaScript.Globals["SetImageAsData"] = new Action<Image, string>(SetImageAsData);
-            LuaScript.Globals["BackgroundScriptData"] = new Func<string, string, string>(luaService.BackgroundScriptData);
-
+            LuaScript.Globals["SetImageAsData"] = new Action<ImageData, string>(SetImageAsData);
+            LuaScript.Globals["BackgroundScriptData"] =
+                new Func<string, string, string>(luaService.BackgroundScriptData);
         }
 
         public override void CalculateSteps()
@@ -76,7 +74,6 @@ namespace PixelVision8
                 Console.WriteLine(e);
                 Exit();
             }
-
         }
 
         public override void LoadSourceData()
@@ -98,12 +95,11 @@ namespace PixelVision8
         {
             stepQueue.Add(functionName);
 
-            _steps.Add(CallStep);
+            Steps.Add(CallStep);
         }
 
         protected void CallStep()
         {
-
             try
             {
                 // Console.WriteLine("calling " + stepQueue[currentStep]);
@@ -115,57 +111,51 @@ namespace PixelVision8
                 Console.WriteLine(e);
                 Exit();
             }
-
         }
 
         public void SetStringAsData(string value)
         {
-
             // TODO need to make sure nothing is saved if bytes is empty
             try
             {
-                bytes = Encoding.UTF8.GetBytes(value);
+                Bytes = Encoding.UTF8.GetBytes(value);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-
             }
-
         }
 
-        public void SetImageAsData(Image image, string maskColor = "#FF00FF")
+        public void SetImageAsData(ImageData imageData, string maskColor = "#FF00FF")
         {
-
             try
             {
-                var palette = image.Colors.Select(ColorUtils.HexToColor).ToArray();
+                var palette = imageData.Colors.Select(DisplayTarget.HexToColor).ToArray();
 
                 var imageExporter = new PNGWriter();
 
-                var exporter = new PixelDataExporter(fileName, image.GetPixels(), image.Width, image.Height, palette, imageExporter,
+                var exporter = new PixelDataExporter(fileName, imageData.GetPixels(), imageData.Width, imageData.Height,
+                    palette, imageExporter,
                     maskColor);
 
                 exporter.CalculateSteps();
 
-                while (exporter.completed == false)
+                while (exporter.Completed == false)
                 {
                     exporter.NextStep();
                 }
 
-                bytes = exporter.bytes;
+                Bytes = exporter.Bytes;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-
             }
-
         }
 
         public void Exit()
         {
-            CurrentStep = totalSteps;
+            CurrentStep = TotalSteps;
         }
     }
 }

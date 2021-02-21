@@ -19,17 +19,16 @@
 //
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Engine.Utils;
+using PixelVision8.Player;
 using System.Collections.Generic;
 
-namespace PixelVision8.Runner.Parsers
+namespace PixelVision8.Runner
 {
     public class ColorParser : ImageParser
     {
         protected readonly List<Color> colors = new List<Color>();
 
-        protected readonly bool unique;
+        // protected readonly bool unique;
 
         protected ColorChip colorChip;
 
@@ -37,11 +36,12 @@ namespace PixelVision8.Runner.Parsers
         protected Color tmpColor;
         protected int totalColors;
 
-        public ColorParser(IImageParser parser, ColorChip colorChip) : base(parser)
+        public ColorParser(string sourceFile, IImageParser parser, ColorChip colorChip) : base(parser)
         {
+            SourcePath = sourceFile;
             this.colorChip = colorChip;
-            unique = colorChip.unique;
-            magenta = ColorUtils.HexToColor(colorChip.maskColor);
+            // unique = colorChip.unique;
+            magenta = DisplayTarget.HexToColor(colorChip.MaskColor);
         }
 
         public override void CalculateSteps()
@@ -51,33 +51,16 @@ namespace PixelVision8.Runner.Parsers
             base.CalculateSteps();
 
             //            steps.Add(IndexColors);
-            _steps.Add(ReadColors);
+            Steps.Add(ReadColors);
             //            steps.Add(ResetColorChip);
-            _steps.Add(UpdateColors);
+            Steps.Add(UpdateColors);
         }
 
         public virtual void ReadColors()
         {
-            // TODO this should be removed in future releases, it's only here to support legacy games
-
-            // If we are loading a legacy game and no system colors are defined, used the image parser's palette
-
-            //            if (colorChip.supportedColors == null)
-            //            {
-            //                string[] systemColors = imageParser.colorPalette.Select(c => ((ColorData) c).ToHex()).ToArray();
-            ////
-            //                for (int i = 0; i < systemColors.Length; i++)
-            //                {
-            //                    colorChip.AddSupportedColor(systemColors[i]);
-            //                }
-            //            }
-
             // Parse colors as normal
 
-            var srcColors =
-                unique
-                    ? Parser.colorPalette.ToArray()
-                    : Parser.colorPixels; //data.Select(c => new ColorAdapter(c) as Color).ToArray();
+            var srcColors = Parser.ColorPixels;
             var total = srcColors.Length;
 
             // Loop through each color and find the unique ones
@@ -89,40 +72,34 @@ namespace PixelVision8.Runner.Parsers
                 if (tmpColor.A < 1) // && !ignoreTransparent)
                     tmpColor = magenta;
 
-                if (unique && tmpColor == magenta)
-                {
-                }
-                else
-                {
-                    //                if(tmpColor != magenta)
-                    colors.Add(tmpColor);
-                }
+                colors.Add(tmpColor);
             }
 
             totalColors = colors.Count;
 
             CurrentStep++;
         }
-        //
-        //        public void ResetColorChip()
-        //        {
-        //            // Clear the colors first
-        ////            colorChip.Clear();
-        //
-        //            currentStep++;
-        //        }
 
         public void UpdateColors()
         {
             for (var i = 0; i < totalColors; i++)
             {
                 var tmpColor = colors[i];
-                var hex = ColorUtils.RgbToHex(tmpColor.R, tmpColor.G, tmpColor.B);
+                var hex = SpriteImageParser.RgbToHex(tmpColor.R, tmpColor.G, tmpColor.B);
 
                 colorChip.UpdateColorAt(i, hex);
             }
 
             CurrentStep++;
+        }
+    }
+
+    public partial class Loader
+    {
+        [FileParser("colors.png", FileFlags.Colors)]
+        public void ParseColors(string file, PixelVision engine)
+        {
+            AddParser(new ColorParser(file, _imageParser, engine.ColorChip));
         }
     }
 }

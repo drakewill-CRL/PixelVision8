@@ -12,12 +12,12 @@ https://www.pixelvision8.com/getting-started
 **/
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 using System;
 
 namespace PixelVision8.Examples
 {
-    class ClearExample : GameChip
+    class ExampleGameChip : GameChip
     {
         // Create a new random generator
         Random random = new Random();

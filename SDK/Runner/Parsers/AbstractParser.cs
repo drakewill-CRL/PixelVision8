@@ -18,37 +18,26 @@
 // Shawn Rakowski - @shwany
 //
 
-using 
-/* Unmerged change from project 'PixelVision8.CoreDesktop'
-Before:
-using System.Collections.Generic;
-using PixelVision8.Runner.Services;
-After:
-using System.Collections.Services;
-using PixelVision8.Runner.Utils;
-using System;
-*/
-PixelVision8.Runner.Utils;
 using System;
 using System.Collections.Generic;
 
-namespace PixelVision8.Runner.Parsers
+namespace PixelVision8.Runner
 {
-    public abstract class AbstractParser : IAbstractParser
+    public abstract class AbstractParser : IParser
     {
-        protected List<Action> _steps = new List<Action>();
+        protected readonly List<Action> Steps = new List<Action>();
 
-        public IFileLoadHelper FileLoadHelper;
+        protected IFileLoader FileLoadHelper;
 
-        public int CurrentStep { get; protected set; }
+        protected int CurrentStep { get; set; }
 
-        public string SourcePath;
+        protected string SourcePath;
 
-        public virtual byte[] bytes { get; set; }
+        public virtual byte[] Bytes { get; set; }
 
-        public int totalSteps => _steps.Count;
+        public int TotalSteps => Steps.Count;
 
-        public bool completed => CurrentStep >= totalSteps;
+        public bool Completed => CurrentStep >= TotalSteps;
 
         public virtual void CalculateSteps()
         {
@@ -56,14 +45,14 @@ namespace PixelVision8.Runner.Parsers
 
             // First step will always be to get the data needed to parse
             if (!string.IsNullOrEmpty(SourcePath))
-                _steps.Add(LoadSourceData);
+                Steps.Add(LoadSourceData);
         }
 
         public virtual void LoadSourceData()
         {
             if (FileLoadHelper != null)
             {
-                bytes = FileLoadHelper.ReadAllBytes(SourcePath);
+                Bytes = FileLoadHelper.ReadAllBytes(SourcePath);
             }
 
             StepCompleted();
@@ -71,9 +60,9 @@ namespace PixelVision8.Runner.Parsers
 
         public virtual void NextStep()
         {
-            if (completed) return;
+            if (Completed) return;
 
-            _steps[CurrentStep]();
+            Steps[CurrentStep]();
         }
 
         public virtual void StepCompleted()
@@ -83,9 +72,9 @@ namespace PixelVision8.Runner.Parsers
 
         public virtual void Dispose()
         {
-            bytes = null;
+            Bytes = null;
             FileLoadHelper = null;
-            _steps.Clear();
+            Steps.Clear();
         }
     }
 }

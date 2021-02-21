@@ -12,12 +12,12 @@ https://www.pixelvision8.com/getting-started
 **/
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 using PixelVision8.Engine.Utils;
 
 namespace PixelVision8.Examples
 {
-    class FlagExample : GameChip
+    class ExampleGameChip : GameChip
     {
         // This point will store the current tile's position
         private Point tilePosition;

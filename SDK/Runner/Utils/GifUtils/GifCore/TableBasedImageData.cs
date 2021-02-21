@@ -23,7 +23,7 @@
 
 using System;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner.Gif
 {
     internal class TableBasedImageData : Block
     {
@@ -48,7 +48,7 @@ namespace PixelVision8.Runner.Utils
 
         public byte[] GetBytes()
         {
-            var bytes = new byte[ImageData.Length + (int)Math.Ceiling(ImageData.Length / 255d) + 2];
+            var bytes = new byte[ImageData.Length + (int) Math.Ceiling(ImageData.Length / 255d) + 2];
             var i = 0;
             var j = 0;
 
@@ -58,7 +58,7 @@ namespace PixelVision8.Runner.Utils
             while (i < ImageData.Length)
             {
                 var left = ImageData.Length - i;
-                var size = (byte)Math.Min(255, left);
+                var size = (byte) Math.Min(255, left);
 
                 bytes[j] = size;
                 Array.Copy(ImageData, i, bytes, j + 1, size);

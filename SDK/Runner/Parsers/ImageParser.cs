@@ -18,11 +18,12 @@
 // Shawn Rakowski - @shwany
 //
 
-namespace PixelVision8.Runner.Parsers
+namespace PixelVision8.Runner
 {
     public class ImageParser : AbstractParser
     {
         protected IImageParser Parser;
+        protected string MaskHex = "#FF00FF";
 
         public ImageParser(IImageParser parser)
         {
@@ -32,12 +33,12 @@ namespace PixelVision8.Runner.Parsers
         public override void CalculateSteps()
         {
             base.CalculateSteps();
-            _steps.Add(ParseImageData);
+            Steps.Add(ParseImageData);
         }
 
         public void ParseImageData()
         {
-            Parser.ReadStream();
+            Parser.ReadStream(SourcePath, MaskHex);
 
             StepCompleted();
         }

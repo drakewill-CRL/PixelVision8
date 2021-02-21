@@ -1,4 +1,4 @@
-﻿//   
+//   
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.  
 //  
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -19,62 +19,71 @@
 //
 
 
-using com.pixelvision8.lite.SDK.Runner.Parsers;
 using Microsoft.Xna.Framework.Graphics;
-using PixelVision8.Engine;
-using PixelVision8.Runner.Parsers;
-
-/* Unmerged change from project 'PixelVision8.CoreDesktop'
-Before:
-using PixelVision8.Runner.Utils;
-After:
-using PixelVision8.Runner.Utils;
+using PixelVision8.Player;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-*/
-using PixelVision8.Runner.Utils;
-using System;
-using System.Collections.Generic;
+using System.Reflection;
 
-namespace PixelVision8.Runner.Services
+namespace PixelVision8.Runner
 
-/* Unmerged change from project 'PixelVision8.CoreDesktop'
-Before:
 {
-    
-    public class Loader
+    public partial class Loader
     {
-        
-        protected readonly List<IAbstractParser> parsers = new List<IAbstractParser>();
-After:
-{
+        public class FileParser : Attribute
+        {
+            public string FileType;
+            public MethodInfo MethodInfo;
+            public FileFlags FileFlag;
+            
+            public FileParser(string fileType, FileFlags fileFlag)
+            {
+                FileType = fileType;
+                FileFlag = fileFlag;
+            }
+        }
 
-    public class Loader
-    {
+        public int currentStep;
 
-        protected readonly List<IAbstractParser> parsers = new List<IAbstractParser>();
-*/
-{
-
-    public class Loader
-    {
-
-        protected readonly List<IAbstractParser> parsers = new List<IAbstractParser>();
+        protected readonly List<IParser> parsers = new List<IParser>();
         protected int currentParserID;
         public bool Completed => currentParserID >= TotalParsers;
+        public float Percent => TotalSteps == 0 ? 1f : currentStep / (float) TotalSteps;
 
-        protected int TotalParsers => parsers.Count;
+        public int TotalParsers => parsers.Count;
 
         public int TotalSteps;
-        private readonly IFileLoadHelper _fileLoadHelper;
+        private readonly IFileLoader _fileLoadHelper;
 
-        private GraphicsDevice _graphicsDevice;
+        public List<FileParser> ParserMapping = new List<FileParser>();
 
-        public Loader(IFileLoadHelper fileLoadHelper, GraphicsDevice graphicsDevice)
+        private IImageParser _imageParser;
+
+        public Loader(IFileLoader fileLoadHelper, IImageParser imageParser)
         {
             _fileLoadHelper = fileLoadHelper;
-            _graphicsDevice = graphicsDevice;
+            _imageParser = imageParser;
+
+            var methods = GetType().GetMethods().Where(m => m.GetCustomAttributes(typeof(FileParser), false).Length > 0)
+                .ToArray();
+
+            for (int i = 0; i < methods.Length; i++)
+            {
+                // Console.WriteLine("Method " + i + " " + methods[i].Name);
+
+                Type thisType = this.GetType();
+                MethodInfo theMethod = thisType.GetMethod(methods[i].Name);
+
+                // Get the File Parser attribute
+                var attributes = theMethod.GetCustomAttribute(typeof(FileParser)) as FileParser;
+
+                // Cache the method info on the attribute instance
+                attributes.MethodInfo = theMethod;
+
+                ParserMapping.Add(attributes);
+            }
+
         }
 
         public void Reset()
@@ -82,88 +91,16 @@ After:
             parsers.Clear();
             currentParserID = 0;
             TotalSteps = 0;
+            currentStep = 0;
         }
 
-        public virtual void ParseFiles(string[] files, IEngine engine)
-        {
-            Reset();
-
-            List<string> wavs = new List<string>();
-
-            Array.Sort(files);
-
-            foreach (var file in files)
-            {
-                if (file.EndsWith("colors.png"))
-                {
-
-/* Unmerged change from project 'PixelVision8.CoreDesktop'
-Before:
-                    var imageParser = new PNGParser(file, _graphicsDevice, engine.ColorChip.maskColor);
-                    
-                    AddParser(new ColorParser(imageParser, engine.ColorChip));
-After:
-                    var imageParser = new PNGParser(file, _graphicsDevice, engine.ColorChip.maskColor);
-
-                    AddParser(new ColorParser(imageParser, engine.ColorChip));
-*/
-                    var imageParser = new PNGParser(file, _graphicsDevice, engine.ColorChip.maskColor);
-
-                    AddParser(new ColorParser(imageParser, engine.ColorChip));
-                }
-                // Look for sprites
-                if (file.EndsWith("sprites.png"))
-                {
-                    var imageParser = new PNGParser(file, _graphicsDevice, engine.ColorChip.maskColor);
-
-                    AddParser(new SpriteImageParser(imageParser, engine.ColorChip, engine.SpriteChip));
-                }
-
-                // Look for fonts
-                else if (file.EndsWith(".font.png"))
-                {
-                    var imageParser = new PNGParser(file, _graphicsDevice, engine.ColorChip.maskColor);
-
-                    AddParser(new FontParser(imageParser, engine.ColorChip, engine.FontChip));
-
-                }
-                // Look for tiles
-                else if (file.EndsWith("tilemap.png"))
-                {
-                    var imageParser = new PNGParser(file, _graphicsDevice, engine.ColorChip.maskColor);
-
-                    AddParser(new TilemapParser(imageParser, engine.ColorChip, engine.SpriteChip, engine.TilemapChip, true));
-
-                }
-                // Look for wavs
-                else if (file.EndsWith(".wav"))
-                {
-                    wavs.Add(file);
-                }
-
-/* Unmerged change from project 'PixelVision8.CoreDesktop'
-Before:
-            }
-            
-            AddParser(new WavParser(wavs.ToArray(), _fileLoadHelper, engine ));
-After:
-            }
-
-            AddParser(new WavParser(wavs.ToArray(), _fileLoadHelper, engine ));
-*/
-            }
-
-            AddParser(new WavParser(wavs.ToArray(), _fileLoadHelper, engine));
-
-        }
-
-        public void AddParser(IAbstractParser parser)
+        public void AddParser(IParser parser)
         {
             parser.CalculateSteps();
 
             parsers.Add(parser);
 
-            TotalSteps += parser.totalSteps;
+            TotalSteps += parser.TotalSteps;
         }
 
         public void LoadAll()
@@ -185,12 +122,38 @@ After:
 
             parser.NextStep();
 
-            if (parser.completed)
+            currentStep++;
+
+            if (parser.Completed)
             {
                 parser.Dispose();
                 currentParserID++;
             }
         }
 
+        public virtual void ParseFiles(string[] files, PixelVision engine)
+        {
+            Reset();
+
+            var values = Enum.GetValues(typeof(FileFlags)).Cast<FileFlags>().ToArray();
+
+            for (var i = 0; i < values.Length; i++)
+            {
+                var parserInfo = ParserMapping.FirstOrDefault(p => p.FileFlag == values[i]);
+                
+                if(parserInfo == null)
+                    continue;
+                
+                var filesToParse = files.Where(f => f.EndsWith(parserInfo.FileType)).ToArray();
+                
+                if (filesToParse.Length > 0)
+                {
+                    for (int j = 0; j < filesToParse.Length; j++)
+                    {
+                        parserInfo.MethodInfo.Invoke(this, new object[] {filesToParse[j], engine});
+                    }
+                }
+            }
+        }
     }
 }

@@ -18,17 +18,16 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 using PixelVision8.Runner.Exporters;
-using PixelVision8.Runner.Utils;
+using PixelVision8.Runner;
 using PixelVision8.Runner.Workspace;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace PixelVision8.Runner.Services
+namespace PixelVision8.Runner
 {
     public class WorkspaceServicePlus : WorkspaceService
     {
@@ -63,7 +62,6 @@ namespace PixelVision8.Runner.Services
             Mounts.Add(
                 new KeyValuePair<WorkspacePath, IFileSystem>(WorkspacePath.Root.AppendDirectory("Workspace"),
                     workspaceDisk));
-
         }
 
         public void RebuildWorkspace()
@@ -88,7 +86,6 @@ namespace PixelVision8.Runner.Services
 
             // Mount the PixelVisionOS directory
             AddMount(new KeyValuePair<WorkspacePath, IFileSystem>(osPath, new MergedFileSystem(systemPaths)));
-
         }
 
         // Exports the active song in the music chip
@@ -116,7 +113,8 @@ namespace PixelVision8.Runner.Services
 
 
                     // TODO exporting sprites doesn't work
-                    if (locator.GetService(typeof(GameDataExportService).FullName) is GameDataExportService exportService)
+                    if (locator.GetService(typeof(GameDataExportService).FullName) is GameDataExportService
+                        exportService)
                     {
                         exportService.ExportSong(filePath.Path, musicChip, soundChip, selectedPatterns);
                         //
@@ -271,7 +269,6 @@ namespace PixelVision8.Runner.Services
 
         public void SaveActiveDisk()
         {
-
             // Create a new mount point for the current game
             var rootPath = WorkspacePath.Root.AppendDirectory("Game");
 
@@ -284,7 +281,6 @@ namespace PixelVision8.Runner.Services
 
         public override void ShutdownSystem()
         {
-
             foreach (var disk in Disks) SaveDisk(disk);
 
             base.ShutdownSystem();
@@ -311,7 +307,7 @@ namespace PixelVision8.Runner.Services
                 }
         }
 
-        public int GenerateSprites(string path, PixelVisionEngine targetGame)
+        public int GenerateSprites(string path, PixelVision targetGame)
         {
             var count = 0;
 
@@ -325,8 +321,8 @@ namespace PixelVision8.Runner.Services
             {
                 // Get all the files in the folder
                 var files = from file in GetEntities(srcPath)
-                            where file.GetExtension() == ".png"
-                            select file;
+                    where file.GetExtension() == ".png"
+                    select file;
 
                 foreach (var file in files)
                 {
@@ -346,7 +342,8 @@ namespace PixelVision8.Runner.Services
                 try
                 {
                     // TODO exporting sprites doesn't work
-                    if (locator.GetService(typeof(GameDataExportService).FullName) is GameDataExportService exportService)
+                    if (locator.GetService(typeof(GameDataExportService).FullName) is GameDataExportService
+                        exportService)
                     {
                         exportService.ExportSpriteBuilder(path + "sb-sprites.lua", targetGame, fileData);
                         //
@@ -397,35 +394,34 @@ namespace PixelVision8.Runner.Services
 
         public void SaveDisk(WorkspacePath path)
         {
-
             var diskExporter = new ZipDiskExporter(path.Path, this);
             diskExporter.CalculateSteps();
 
-            while (diskExporter.completed == false)
+            while (diskExporter.Completed == false)
             {
                 diskExporter.NextStep();
             }
-
         }
 
-        public Dictionary<string, object> CreateZipFile(WorkspacePath path, Dictionary<WorkspacePath, WorkspacePath> files)
+        public Dictionary<string, object> CreateZipFile(WorkspacePath path,
+            Dictionary<WorkspacePath, WorkspacePath> files)
         {
             var fileHelper = new WorkspaceFileLoadHelper(this);
             var zipExporter = new ZipExporter(path.Path, fileHelper, files);
             zipExporter.CalculateSteps();
 
-            while (zipExporter.completed == false)
+            while (zipExporter.Completed == false)
             {
                 zipExporter.NextStep();
             }
 
             try
             {
-                if ((bool)zipExporter.Response["success"])
+                if ((bool) zipExporter.Response["success"])
                 {
                     var zipPath = WorkspacePath.Parse(zipExporter.fileName);
 
-                    SaveExporterFiles(new Dictionary<string, byte[]>() { { zipExporter.fileName, zipExporter.bytes } });
+                    SaveExporterFiles(new Dictionary<string, byte[]>() {{zipExporter.fileName, zipExporter.Bytes}});
                 }
             }
             catch (Exception e)

@@ -12,11 +12,11 @@ https://www.pixelvision8.com/getting-started
 **/
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 
 namespace PixelVision8.Examples
 {
-    class DrawTilemapExample : GameChip
+    class ExampleGameChip : GameChip
     {
         // Use floats to store the subpixel position
         private float speed = 5;

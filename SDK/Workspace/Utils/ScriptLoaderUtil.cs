@@ -20,17 +20,15 @@
 
 using MoonSharp.Interpreter;
 using MoonSharp.Interpreter.Loaders;
-using PixelVision8.Runner.Services;
+using PixelVision8.Runner;
 using PixelVision8.Runner.Workspace;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner
 {
-
     public class ScriptLoaderUtil : IScriptLoader
     {
-
         private readonly WorkspaceService _workspace;
 
         public ScriptLoaderUtil(WorkspaceService workspace)
@@ -45,7 +43,6 @@ namespace PixelVision8.Runner.Utils
 
         public object LoadFile(string file, Table globalContext)
         {
-
             List<WorkspacePath> sharedLibPaths = _workspace.SharedLibDirectories();
 
             sharedLibPaths.Insert(0, WorkspacePath.Root.AppendDirectory("Game"));
@@ -62,7 +59,6 @@ namespace PixelVision8.Runner.Utils
 
                 if (!string.IsNullOrEmpty(script))
                 {
-
                     // Replace math operators
                     var pattern = @"(\S+)\s*([+\-*/%])\s*=";
                     var replacement = "$1 = $1 $2 ";
@@ -75,10 +71,10 @@ namespace PixelVision8.Runner.Utils
 
                     return script;
                 }
-
             }
 
-            _workspace.UpdateLog($"Could not load '{file}' file because it is either missing or empty.", LogType.Warning);
+            _workspace.UpdateLog($"Could not load '{file}' file because it is either missing or empty.",
+                LogType.Warning);
 
             return script;
 
@@ -91,7 +87,6 @@ namespace PixelVision8.Runner.Utils
             // }
 
             // return script;
-
         }
 
         public string ResolveFileName(string filename, Table globalContext)
@@ -112,7 +107,6 @@ namespace PixelVision8.Runner.Utils
 
         public string ResolveModuleName(string modname, Table globalContext)
         {
-
             if (!modname.EndsWith(".lua"))
             {
                 modname = modname + ".lua";
@@ -143,5 +137,4 @@ namespace PixelVision8.Runner.Utils
             return modname;
         }
     }
-
 }

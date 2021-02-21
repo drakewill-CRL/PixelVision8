@@ -18,13 +18,13 @@
 // Shawn Rakowski - @shwany
 //
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner
 {
     public class TiledUtil
     {
         public static uint CreateGID(int id, bool flipH, bool flipV)
         {
-            var gid = (uint)id;
+            var gid = (uint) id;
 
             if (flipH) gid |= 1U << 31;
 
@@ -41,7 +41,7 @@ namespace PixelVision8.Runner.Utils
 
             var idMask = (1 << 30) - 1;
 
-            id = (int)(gid & idMask);
+            id = (int) (gid & idMask);
 
             var hMask = 1 << 31;
 
