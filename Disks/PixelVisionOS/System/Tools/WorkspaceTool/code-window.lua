@@ -29,16 +29,9 @@ FileTypeMap =
     tiles = "filetiles"
 }
 
-function WorkspaceTool:OpenWindow(path, scrollTo, selection)
+function WorkspaceTool:CreateWindow()
 
-    -- Make sure the path exists before loading it up
-    if(PathExists(path) == false) then
-
-        -- Use the fault workspace path
-        path = self.workspacePath
-
-    end
-
+    self.pathHistory = {}
     -- Configure window settings
     self.iconPadding = 16
     self.iconWidth = 48
@@ -48,24 +41,16 @@ function WorkspaceTool:OpenWindow(path, scrollTo, selection)
     self.totalPerWindow = 12
     self.totalPerColumn = 3
     self.totalPerPage = 12
-    self.pathHistory = {}
-    self.focus = true
-    self.maxChars = 43
-    self.windowRect = NewRect(8, 16, windowchrome.width * 8, math.floor(#windowchrome.spriteIDs/windowchrome.width * 8))
-    self.dragCountBGArgs = {0, 0, 9, 6, 0, DrawMode.SpriteAbove}
-    self.dragCountTextArgs = {"00", 0, 0, DrawMode.SpriteAbove, "small", 15, -4}
-    self.fileCount = 0
-    self.totalSelections = 0
-    -- Clear the window refresh time
-    self.refreshTime = 0
+    
     self.refreshDelay = 5
+    self.maxChars = 43
 
-    -- Make sure the last selections are cleared
-    self:ClearSelections()
+    local windowChrome = MetaSprite( FindMetaSpriteId("windowchrome" ) )
 
-    -- print("window chrome", self.windowRect)
+    self.totalDisks = tonumber(ReadBiosData("MaxDisks", 2))
 
-    self.totalDisk = tonumber(ReadBiosData("MaxDisks", 2))
+    self.windowRect = NewRect(8, 16, windowChrome.width, windowChrome.height)
+    
 
     -- TODO this should come from the bios file
     self.validFiles =
@@ -81,19 +66,68 @@ function WorkspaceTool:OpenWindow(path, scrollTo, selection)
         ".cs"
     }
 
+    self.files = nil
+
+end
+
+function WorkspaceTool:UpdateWindowState()
+    -- Pass the current path's window scroll and selection to the history
+    self.pathHistory[self.currentPath.Path] = {
+        scrollPos = self.vSliderData.value,
+        selection = #self.selectedFiles > 0 and self.files[self.selectedFiles[1]].path or nil
+    }
+end
+
+function WorkspaceTool:OpenWindow(path, scrollTo, selectedPath)
+
+    -- Make sure the path exists before loading it up
+    if(PathExists(path) == false) then
+
+        -- Use the fault workspace path
+        path = self.workspacePath
+
+    end
+
+    -- Check to see if there is a path we need to save
+    if(self.currentPath ~= nil) then
+
+        self:UpdateWindowState()
+        
+    end
+
+    -- Reset values
+    self.focus = true
+    self.fileCount = 0
+    self.totalSelections = 0
+
+    -- Clear the window refresh time
+    self.refreshTime = 0
+
+    -- Reset runner type
+    self.runnerType = "none"
+    
+    -- Make sure the last selections are cleared
+    self:ClearSelections()
+
+    -- print("self.pathHistory", dump(self.pathHistory))
+
     -- Look for the last scroll position of this path
-    if(scrollTo == nil and self.pathHistory[path] ~= nil) then
+    if(self.pathHistory[path.Path] ~= nil) then
 
         -- if there is a path history object, change the scrollTO and selection  value
-        scrollTo = self.pathHistory[path].scrollPos
-        selection = self.pathHistory[path].selection
+        scrollTo = scrollTo or self.pathHistory[path.Path].scrollPos
+
+        if(self.pathHistory[path.Path].selection ~= nil) then
+            selectedPath = selectedPath or NewWorkspacePath(self.pathHistory[path.Path].selection)
+        end
 
     end
 
     -- Set a default scrollTo value if none is provided
     scrollTo = scrollTo or 0
-    selection = selection or 0
+    selectedPath = selectedPath or nil
 
+    -- print("Selections", path.Path, dump(selection))
 
     -- save the current directory
     self.currentPath = path
@@ -101,28 +135,31 @@ function WorkspaceTool:OpenWindow(path, scrollTo, selection)
     -- TODO make sure the trash path check is valid
     self.isGameDir = pixelVisionOS:ValidateGameInDir(self.currentPath, requiredFiles) and self:TrashOpen() == false
 
-    -- Draw the window chrome
-    DrawSprites(windowchrome.spriteIDs, 8, 16, windowchrome.width, false, false, DrawMode.TilemapCache)
-
+    
     if(self.vSliderData == nil) then
 
         -- Create the slider for the window
         self.vSliderData = editorUI:CreateSlider({x = 192, y = 26, w = 16, h = 195}, "vsliderhandle", "This is a vertical slider")
         self.vSliderData.onAction = function(value)
 
-            -- Set the scroll position
-            self.lastStartID = Clamp(self.hiddenRows * value, 0, self.hiddenRows - 1) * self.totalPerColumn
+            local newStartID = Clamp(self.hiddenRows * value, 0, self.hiddenRows - 1) * self.totalPerColumn
 
-            -- Refresh the window at the end of the frame
-            self:RefreshWindow()
+            if(newStartID ~= self.lastStartID) then
+
+                -- Set the scroll position
+                self.lastStartID = newStartID
+
+                -- Refresh the window at the end of the frame
+                self:RefreshWindow()
+
+            end
 
         end
 
     end
 
     -- self:RegisterUI(self.closeButton, "UpdateButton", editorUI)
-    self.desktopIconCount = 2 + self.totalDisk
-
+    self.desktopIconCount = 2 + self.totalDisks
 
     self.tmpY = 0
     self.tmpPos = null
@@ -134,7 +171,7 @@ function WorkspaceTool:OpenWindow(path, scrollTo, selection)
         self.windowIconButtons = pixelVisionOS:CreateIconGroup(false)
 
         self.tmpY  = 16
-        for i = 1, self.totalDisk + 1 do
+        for i = 1, self.totalDisks + 1 do
 
             pixelVisionOS:NewIconGroupButton(self.windowIconButtons, NewPoint(208, self.tmpY), "none", nil, toolTip)
 
@@ -168,10 +205,10 @@ function WorkspaceTool:OpenWindow(path, scrollTo, selection)
     -- Reset the last start id
     self.lastStartID = 0
 
+    -- TODO this shouldn't be called since it's handled in the window refresh but throws an error when taken out
     self:UpdateFileList()
 
-    -- Update the slider
-    editorUI:ChangeSlider(self.vSliderData, scrollTo)
+    
 
     self:ChangeWindowTitle()
 
@@ -179,12 +216,21 @@ function WorkspaceTool:OpenWindow(path, scrollTo, selection)
     pixelVisionOS:RegisterUI({name = "Window"}, "UpdateWindow", self)
 
 
-    self:UpdateContextMenu("OpenWindow")
+    self:UpdateContextMenu()
 
-    -- TODO restore any selections
+    -- Redraw the window without refreshing the list since we did it above
+    self:RefreshWindow(true)
 
-    -- Redraw the window
-    self:RefreshWindow()
+    -- print("selectedPath", selectedPath)
+
+    if(selectedPath ~= nil and PathExists(selectedPath)) then
+
+        self:SelectFile(selectedPath)
+
+    end
+
+    -- Update the slider
+    editorUI:ChangeSlider(self.vSliderData, scrollTo)
 
 end
 
@@ -222,7 +268,21 @@ end
 
 function WorkspaceTool:UpdateWindow()
 
-    editorUI:UpdateSlider(self.vSliderData)
+    if(self.vSliderData.enabled) then
+        editorUI:UpdateSlider(self.vSliderData)
+
+        -- Check for mouse wheel scrolling
+        local wheelDir = MouseWheel()
+
+        if(wheelDir.Y ~= 0) then
+
+            local scrollValue = Clamp(wheelDir.y, -1, 1) * -5
+
+            editorUI:ChangeSlider(self.vSliderData, (Clamp(self.vSliderData.value * 100 + scrollValue, 0, 100)/100))
+             
+        
+        end
+    end
 
     pixelVisionOS:UpdateIconGroup(self.windowIconButtons)
 
@@ -235,15 +295,12 @@ function WorkspaceTool:UpdateWindow()
 
         if(self.totalSelections > 1) then
 
-            self.dragCountBGArgs[1] = self.windowIconButtons.drawIconArgs[2] + 30
-            self.dragCountBGArgs[2] = self.windowIconButtons.drawIconArgs[3] - 2
+            local x = editorUI.collisionManager.mousePos.x - 24 + 30
+            local y = editorUI.collisionManager.mousePos.y - 12 - 2
 
-            editorUI:NewDraw("DrawRect", self.dragCountBGArgs)
-
-            self.dragCountTextArgs[1] = string.format("%02d", self.totalSelections)
-            self.dragCountTextArgs[2] = self.dragCountBGArgs[1] + 1
-            self.dragCountTextArgs[3] = self.dragCountBGArgs[2] - 1
-            editorUI:NewDraw("DrawText", self.dragCountTextArgs)
+            DrawRect(x, y, 9, 6, 0, DrawMode.SpriteAbove)
+            DrawText(string.format("%02d", self.totalSelections), x + 1, y - 1, DrawMode.SpriteAbove, "small", 15, -4)
+            
         end
     end
 
@@ -284,17 +341,11 @@ end
 
 function WorkspaceTool:ChangeFocus(value)
 
-    if(MousePosition().Y < 12) then
+    if(editorUI.mouseCursor.pos.Y < 12) then
         return
     end
-
-    value = value or (self.windowRect.contains(MousePosition()))
-
-    -- if(value == self.focus) then
-    --     return
-    -- end
-
-    -- print("ChangeFocus", value, self.focus)
+    
+    value = value or (self.windowRect.contains(editorUI.mouseCursor.pos))
 
     self.focus = value
 
@@ -351,6 +402,54 @@ end
 
 function WorkspaceTool:RefreshWindow(updateFileList)
 
+    if(self.currentPath == nil) then
+        self.currentPath = NewWorkspacePath("/Workspace/")
+    end
+    -- print("self.currentPath", self.currentPath)
+    local infoPath = self.currentPath.AppendFile("info.json")
+
+    self.runnerType = "none"
+
+    -- TODO need to enable or disable the Run command based on what runner type and code file exist
+
+    if(PathExists(infoPath)) then
+
+        local data = ReadJson(infoPath)
+
+        if(data["runnerType"] ~= nil) then
+
+            if(data["runnerType"] == "lua" and PathExists(self.currentPath.AppendFile("code.lua"))) then
+
+                self.runnerType = "lua"
+            elseif(data["runnerType"] == "csharp" and PathExists(self.currentPath.AppendFile("code.cs"))) then
+            
+                self.runnerType = "csharp"
+            end
+
+        elseif(PathExists(self.currentPath.AppendFile("code.cs"))) then
+
+            self.runnerType = "csharp"
+
+        elseif(PathExists(self.currentPath.AppendFile("code.lua"))) then
+
+            self.runnerType = "lua"
+
+        end
+
+    else
+
+        if(PathExists(self.currentPath.AppendFile("code.cs"))) then
+
+            self.runnerType = "csharp"
+
+        elseif(PathExists(self.currentPath.AppendFile("code.lua"))) then
+           
+            self.runnerType = "lua"
+
+        end
+
+    end
+
     -- Check to see if we need to refresh the file list
     if(updateFileList == true) then
 
@@ -358,6 +457,15 @@ function WorkspaceTool:RefreshWindow(updateFileList)
         self:UpdateFileList()
 
     end
+
+
+    -- print("RefreshWindow", "Runner Type", self.runnerType)
+
+    -- TODO test to see if this is a game project
+
+    -- TODO read info file
+
+    -- TODO determin code mode
 
     -- Invalidate the component so it redraws at the end of the frame
     editorUI:Invalidate(self)
@@ -391,7 +499,7 @@ function WorkspaceTool:ChangeWindowTitle()
     end
 
     -- Draw the new title bar text   
-    DrawText(pathTitle, 19, 17, DrawMode.TilemapCache, "medium5", colorID, - 4)
+    DrawText(pathTitle, 19, 17, DrawMode.TilemapCache, "medium", colorID, - 4)
 
 end
 
@@ -540,7 +648,7 @@ function WorkspaceTool:OnWindowIconClick(id)
 
 
     -- Make sure desktop icons are not selected
-    pixelVisionOS:ClearIconGroupSelections(self.desktopIconButtons)
+    -- pixelVisionOS:ClearIconGroupSelections(self.desktopIconButtons)
 
     -- -- local index = id + (lastStartID)-- TODO need to add the scrolling offset
 
@@ -557,45 +665,64 @@ function WorkspaceTool:OnWindowIconClick(id)
     -- If the type is a folder, open it
     if(type == "folder" or type == "updirectory" or type == "disk" or type == "drive" or type == "trash") then
 
+
+        if(#self.selectedFiles > 0 and type == "folder") then
+            self.selectedFiles = {realFileID}
+        else
+            self.selectedFiles = {}
+        end
+
+        self.totalSelections = #self.selectedFiles
+
+        -- self.selectedFiles = {}
+        -- print("Open Click", realFileID, dump(self.selectedFiles), dump(tmpItem))
+
         self:OpenWindow(tmpItem.path)
 
     -- Check to see if the file is in the trash
     elseif(self:TrashOpen()) then
 
         -- Show warning message about trying to edit files in the trash
-        pixelVisionOS:ShowMessageModal(self.toolName .. " Error", "You are not able to edit files inside of the trash.", 160, false)
+        pixelVisionOS:ShowMessageModal(self.toolName .. " Error", "You are not able to edit files inside of the trash.", 160)
 
         -- Check to see if the file is an executable
     elseif(type == "run") then
 
-        local metaData = {
-            codeFile = "code.cs"
-        }
+        if(self.runnerType == nil) then
 
-        print("Load Game", dump(metaData))
+            -- TODO You shouldn't be able to run a game if the runnerType is not set
+            return
 
-        LoadGame(path, metaData)
+        end
+
+        LoadGame(path, { runnerType = self.runnerType })
 
     elseif(type == "pv8") then
+
+        local buttons = 
+      {
+        {
+          name = "modalyesbutton",
+          action = function(target)
+            MountDisk(NewWorkspacePath(path))
+          end,
+          key = Keys.Enter,
+          tooltip = "Press 'enter' to quit the tool"
+        },
+        {
+            name = "modalnobutton",
+            action = function(target)
+              target:onParentClose()
+            end,
+            key = Keys.Enter,
+            tooltip = "Press 'enter' to quit the tool"
+          }
+      }
 
         -- TODO need to see if there is space to mount another disk
         -- TODO need to know if this disk is being mounted as read only
         -- TODO don't run
-        pixelVisionOS:ShowMessageModal("Run Disk", "Do you want to mount this disk?", 160, true,
-                function()
-
-                    -- Only perform the copy if the user selects OK from the modal
-                    if(pixelVisionOS.messageModal.selectionValue) then
-
-                        MountDisk(NewWorkspacePath(path))
-
-                        -- TODO need to load the game in read only mode
-                        -- LoadGame(path)
-
-                    end
-
-                end
-        )
+        pixelVisionOS:ShowMessageModal("Run Disk", "Do you want to mount this disk?", 160, buttons)
 
     elseif(type == "wav") then
 
@@ -606,8 +733,7 @@ function WorkspaceTool:OnWindowIconClick(id)
         -- Check to see if there is an editor for the type or if the type is unknown
     elseif(self.editorMapping[type] == nil or type == "unknown") then
 
-        pixelVisionOS:ShowMessageModal(self.toolName .. " Error", "There is no tool installed to edit this file.", 160, false
-        )
+        pixelVisionOS:ShowMessageModal(self.toolName .. " Error", "There is no tool installed to edit this file.", 160)
 
         -- Now we are ready to try to edit a file
     else
@@ -616,7 +742,7 @@ function WorkspaceTool:OnWindowIconClick(id)
 
             if(PathExists(NewWorkspacePath("/Workspace/")) == false) then
 
-                pixelVisionOS:ShowMessageModal("Installer Error", "You need to create a 'Workspace' drive before you can run an install script.", 160, false)
+                pixelVisionOS:ShowMessageModal("Installer Error", "You need to create a 'Workspace' drive before you can run an install script.", 160)
 
                 return
 
@@ -626,7 +752,7 @@ function WorkspaceTool:OnWindowIconClick(id)
                 -- TODO need to see if there is space to mount another disk
                 -- TODO need to know if this disk is being mounted as read only
                 -- TODO don't run
-                pixelVisionOS:ShowMessageModal("Installer Error", "Installers can only be run from a disk.", 160, false)
+                pixelVisionOS:ShowMessageModal("Installer Error", "Installers can only be run from a disk.", 160)
 
                 return
 
@@ -771,7 +897,6 @@ function WorkspaceTool:DrawWindow()
 
         end
 
-        pixelVisionOS:CreateIconButtonStates(button, spriteName, item ~= nil and item.name or "", item ~= nil and item.bgColor or self.windowBGColor)
 
         -- Set the button values
         button.fileID = item ~= nil and fileID or -1
@@ -817,6 +942,9 @@ function WorkspaceTool:DrawWindow()
             end
 
         end
+
+        pixelVisionOS:CreateIconButtonStates(button, spriteName, item ~= nil and item.name or "", item ~= nil and item.bgColor or self.windowBGColor)
+
 
     end
 
@@ -972,8 +1100,28 @@ end
 function WorkspaceTool:GetIconSpriteName(item)
 
     local iconName = FileTypeMap[item.type]
-    -- -- print("name", name, iconName)
-    return iconName == nil and "fileunknown" or FileTypeMap[item.type]
+
+    -- print("name", name, iconName)
+
+    if(iconName == "filecodelua") then
+
+        if(self.runnerType == "none" or self.runnerType == "csharp") then
+
+            iconName = "filedisabledcodelua"
+
+        end
+
+    elseif(iconName == "filecodecsharp") then
+
+        if(self.runnerType == "none" or self.runnerType == "lua") then
+
+            iconName = "filedisabledcodecsharp"
+
+        end
+
+    end
+    
+    return iconName == nil and "fileunknown" or iconName
 
 end
 
@@ -996,7 +1144,7 @@ function WorkspaceTool:GetDirectoryContents(workspacePath)
                 isDirectory = true,
                 selected = false,
                 dragDelay = -1,
-                sprite = PathExists(self.workspacePath.AppendDirectory("System")) and "filedriveos" or "filedrive",
+                sprite = "filedrive",
                 bgColor = BackgroundColor()
             }
     )
@@ -1004,8 +1152,8 @@ function WorkspaceTool:GetDirectoryContents(workspacePath)
 
     local disks = DiskPaths()
 
-    -- TODO this should loop through the maxium number of disks
-    for i = 1, self.totalDisk do
+    -- TODO this should loop through the maximum number of disks
+    for i = 1, self.totalDisks do
 
         local noDisk = i > #disks
 
@@ -1073,8 +1221,6 @@ function WorkspaceTool:GetDirectoryContents(workspacePath)
 
     local srcSeg = workspacePath.GetDirectorySegments()
 
-    -- print("ValidateGameInDir", dump(srcSeg))
-
     local totalSeg = #srcSeg
 
     local codeFilename = "code.lua"
@@ -1083,8 +1229,11 @@ function WorkspaceTool:GetDirectoryContents(workspacePath)
         codeFilename = "code.cs"
     end
 
+    local showRunner = self.runnerType ~= "none" and pixelVisionOS:ValidateGameInDir(workspacePath, {codeFilename})
+
+    -- print("self.runnerType", self.runnerType)
     -- Check to see if this is a game directory and we should display the run exe
-    if(pixelVisionOS:ValidateGameInDir(workspacePath, {codeFilename}) and self:TrashOpen() == false) then
+    if(showRunner and self:TrashOpen() == false) then
 
         if((srcSeg[1] == "Disks") or (srcSeg[1] == "Workspace" and totalSeg ~= 1)) then
 
@@ -1101,64 +1250,7 @@ function WorkspaceTool:GetDirectoryContents(workspacePath)
                     }
             )
 
-            local customIconPath = workspacePath.AppendFile("icon.png")
-
-            -- TOOD should we cache this since the window refreshes?
-
-            -- TODO look to see if there is a custom icon.png
-            if(PathExists(customIconPath)) then
-                -- print("Found custom icon")
-
-
-                -- Check to see if we have a list of the first 16 system colors
-                if(self.systemColors == nil) then
-
-                    -- Build a list of system colors to use as a reference
-                    self.systemColors = {}
-                    for i = 1, 16 do
-                        table.insert(self.systemColors, Color(i-1))
-                    end
-
-                end
-
-                -- TODO load it up
-                local customIcon = ReadImage(customIconPath, "#FF00FF", self.systemColors)
-
-
-                -- TODO copy 3 x 3 sprites out of it into memory
-                local spriteIDs = {}
-
-                self.customSpriteStartIndex = 767
-
-                local spriteMap = {
-                    {0, 1, 2,
-                     6, 7, 8,
-                     12, 13, 14},
-                    {3, 4, 5,
-                     9, 10, 11,
-                     15, 16, 17},
-                }
-
-                _G["filecustomiconup"] = {spriteIDs = {}, width = 3, colorOffset = 0}
-
-
-
-                for i = 1, 9 do
-                    local index = self.customSpriteStartIndex + i
-                    Sprite(index, customIcon.GetSpriteData(spriteMap[1][i]), ColorsPerSprite())
-                    table.insert(_G["filecustomiconup"].spriteIDs, index)
-                end
-
-
-                _G["filecustomiconselectedup"] = {spriteIDs = {}, width = 3, colorOffset = 0}
-
-                for i = 1, 9 do
-                    local index = self.customSpriteStartIndex + i + 9
-                    Sprite(index, customIcon.GetSpriteData(spriteMap[2][i]), ColorsPerSprite())
-                    table.insert(_G["filecustomiconselectedup"].spriteIDs, index)
-                end
-
-                -- print("filecustomiconup", dump(_G["filecustomiconup"]))
+            if(pixelVisionOS:LoadCustomIcon(workspacePath.AppendFile("icon.png"))) then
 
                 -- local sprites = 
                 FileTypeMap.run = "filecustomicon"

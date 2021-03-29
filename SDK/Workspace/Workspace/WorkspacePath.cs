@@ -28,7 +28,7 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 
-namespace PixelVision8.Runner.Workspace
+namespace PixelVision8.Workspace
 {
     public struct WorkspacePath : IEquatable<WorkspacePath>, IComparable<WorkspacePath>
     {
@@ -245,7 +245,7 @@ namespace PixelVision8.Runner.Workspace
         [Pure]
         public override bool Equals(object obj)
         {
-            if (obj is WorkspacePath) return Equals((WorkspacePath)obj);
+            if (obj is WorkspacePath) return Equals((WorkspacePath) obj);
 
             return false;
         }

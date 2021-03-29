@@ -1,4 +1,4 @@
-﻿//   
+//   
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.  
 //  
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -18,20 +18,20 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Runner.Utils;
+
 using System.Linq;
+using PixelVision8.Runner;
 using System.Text;
+using PixelVision8.Player;
 
 namespace PixelVision8.Runner.Exporters
 {
     public class SavedDataExporter : AbstractExporter
     {
-        private readonly IEngine targetEngine;
+        private readonly PixelVision targetEngine;
         private StringBuilder sb;
 
-        public SavedDataExporter(string fileName, IEngine targetEngine) : base(fileName)
+        public SavedDataExporter(string fileName, PixelVision targetEngine) : base(fileName)
         {
             this.targetEngine = targetEngine;
 
@@ -40,23 +40,23 @@ namespace PixelVision8.Runner.Exporters
 
         public override void CalculateSteps()
         {
-            if (((GameChip)targetEngine.GameChip).SaveSlots < 1) return;
+            if ((targetEngine.GameChip).SaveSlots < 1) return;
 
             base.CalculateSteps();
 
             // Create a new string builder
-            _steps.Add(CreateStringBuilder);
+            Steps.Add(CreateStringBuilder);
 
 
-            _steps.Add(SaveGameData);
+            Steps.Add(SaveGameData);
 
             // Save the final string builder
-            _steps.Add(CloseStringBuilder);
+            Steps.Add(CloseStringBuilder);
         }
 
         private void SaveGameData()
         {
-            var gameChip = targetEngine.GameChip as GameChip;
+            var gameChip = targetEngine.GameChip;
 
             // Save Data
             sb.Append("\"savedData\":");
@@ -119,7 +119,7 @@ namespace PixelVision8.Runner.Exporters
             JsonUtil.GetLineBreak(sb);
             sb.Append("}");
 
-            bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            Bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
             CurrentStep++;
         }

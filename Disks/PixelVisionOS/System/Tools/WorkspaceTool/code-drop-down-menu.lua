@@ -9,7 +9,7 @@ function WorkspaceTool:CreateDropDownMenu()
     local tmpProjectPath = ReadBiosData("ProjectTemplate")
     self.fileTemplatePath = tmpProjectPath == nil and NewWorkspacePath(ReadMetadata("RootPath", "/")).AppendDirectory(ReadMetadata("GameName", "untitled")).AppendDirectory("ProjectTemplate") or NewWorkspacePath(tmpProjectPath)
 
-    print("Template Path", self.fileTemplatePath, PathExists(self.fileTemplatePath))
+    -- print("Template Path", self.fileTemplatePath, PathExists(self.fileTemplatePath))
     -- Create some enums for the focus typess
 
     -- TODO need to see if the log file actually exists
@@ -73,7 +73,7 @@ function WorkspaceTool:CreateDropDownMenu()
 
         addAt = addAt + 1
 
-        print("New Project")
+        -- print("New Project")
 
     end
 
@@ -89,19 +89,20 @@ function WorkspaceTool:CreateDropDownMenu()
 
     -- end
 
+    -- print("Code Exists ", self.fileTemplatePath.AppendFile("code.lua"), self.fileTemplatePath)
     -- Add text options to the menu
     -- if(runnerName ~= PlayVersion and runnerName ~= DrawVersion and runnerName ~= TuneVersion) then
-    if(PathExists(self.fileTemplatePath.AppendFile("code.json"))) then
-        table.insert(menuOptions, addAt, {name = "New Code", action = function() self:OnNewFile("code", "lua") end, enabled = false, toolTip = "Run the current game."})
-        table.insert(self.newFileOptions, {name = "New Code"})
-        addAt = addAt + 1
-    end
+    -- if(PathExists(self.fileTemplatePath.AppendFile("code.lua"))) then
+    table.insert(menuOptions, addAt, {name = "New Code", action = function() self:CreateNewCodeFile() end, enabled = false, toolTip = "Run the current game."})
+    table.insert(self.newFileOptions, {name = "New Code"})
+    addAt = addAt + 1
+    -- end
 
-    if(PathExists(self.fileTemplatePath.AppendFile("json.json"))) then
-        table.insert(menuOptions, addAt, {name = "New JSON", action = function() self:OnNewFile("untitled", "json") end, enabled = false, toolTip = "Run the current game."})
-        table.insert(self.newFileOptions, {name = "New JSON"})
-        addAt = addAt + 1
-    end
+    -- if(PathExists(self.fileTemplatePath.AppendFile("json.json"))) then
+    table.insert(menuOptions, addAt, {name = "New JSON", action = function() self:OnNewFile("untitled", "json") end, enabled = false, toolTip = "Run the current game."})
+    table.insert(self.newFileOptions, {name = "New JSON"})
+    addAt = addAt + 1
+    -- end
 
     -- Add draw options
 
@@ -118,13 +119,13 @@ function WorkspaceTool:CreateDropDownMenu()
         addAt = addAt + 1
     end
 
-    if(PathExists(self.fileTemplatePath.AppendFile("large.font.png"))) then
+    -- if(PathExists(self.fileTemplatePath.AppendFile("large.font.png"))) then
 
         table.insert(menuOptions, addAt, {name = "New Font", action = function() self:OnNewFile("untitled", "font.png", "font") end, enabled = false, toolTip = "Run the current game."})
         table.insert(self.newFileOptions, {name = "New Font"})
         addAt = addAt + 1
 
-    end
+    -- end
 
     if(PathExists(self.fileTemplatePath.AppendFile("tilemap.json"))) then
 
@@ -151,8 +152,9 @@ function WorkspaceTool:CreateDropDownMenu()
 
     end
 
-    if(PathExists(self.fileTemplatePath.AppendFile("code.lua")) or PathExists(self.fileTemplatePath.AppendFile("code.cs"))) then
+    -- if(PathExists(self.currentPath.AppendFile("code.lua")) or PathExists(self.currentPath.AppendFile("code.cs"))) then
 
+        -- print("GAME")
         -- TODO need to add to the offset
         addAt = addAt + 6
 
@@ -160,7 +162,7 @@ function WorkspaceTool:CreateDropDownMenu()
         table.insert(menuOptions, addAt, {name = "Run", key = Keys.R, action = function() self:OnRun() end, enabled = false, toolTip = "Run the current game."})
         addAt = addAt + 1
 
-        table.insert(menuOptions, addAt, {name = "Build", action = function() self:OnExportGame() end, enabled = false, toolTip = "Create a PV8 file from the current game."})
+        table.insert(menuOptions, addAt, {name = "Build", action = function() self:ExportGame() end, enabled = false, toolTip = "Create a PV8 file from the current game."})
         addAt = addAt + 1
 
         table.insert(menuOptions, addAt, {divider = true})
@@ -169,9 +171,129 @@ function WorkspaceTool:CreateDropDownMenu()
         RunShortcut = "Run"
         BuildShortcut = "Build"
 
-    end
+    -- end
 
     pixelVisionOS:CreateTitleBarMenu(menuOptions, "See menu options for this tool.")
+
+end
+
+function WorkspaceTool:ExportGame()
+
+    pixelVisionOS:OnExportGame(
+        self.currentPath,
+        function (value)
+            self:OnBuildGameClose(value)
+        end
+    )
+
+end
+
+function WorkspaceTool:OnBuildGameClose(response)
+
+    local response = ReadExportMessage()
+    local success = response.DiskExporter_success
+    local message = response.DiskExporter_message
+    local path = response.DiskExporter_path
+
+    if(success == true) then
+        self:OpenWindow(NewWorkspacePath(path).ParentPath)
+    end
+
+end
+
+function WorkspaceTool:CreateNewCodeFile(defaultPath)
+
+    local templatePath = NewWorkspacePath(ReadMetadata("RootPath", "/")).AppendDirectory(ReadMetadata("GameName", "untitled")).AppendDirectory("CodeTemplates")
+
+    defaultPath = defaultPath or self.currentPath
+
+    local fileName = "code"
+    local ext = ".lua"
+
+    local infoFilePath = defaultPath.AppendFile("info.json")
+
+    if(PathExists(infoFilePath)) then
+
+        local data = ReadJson(infoFilePath)
+
+        -- print(dump(data))
+
+        if(data["runnerType"] ~= nil) then
+            ext = data["runnerType"] ~= "lua" and  ".cs" or ".lua"
+        end
+
+    elseif(PathExists(defaultPath.AppendFile("code.cs"))) then
+
+        ext = ".cs"
+
+    end
+
+    local empty = PathExists(defaultPath.AppendFile(fileName .. ext))
+
+    -- print("Create new code file at", defaultPath, fileName, ext)
+
+    if(empty ~= true) then
+
+        local newPath = defaultPath.AppendFile(fileName .. ext)
+
+        -- print("Create file", templatePath.AppendFile("main-" .. fileName .. ext), "in", defaultPath.AppendFile(fileName .. ext))
+
+        CopyTo(templatePath.AppendFile("main-" .. fileName .. ext), newPath)
+
+        self:RefreshWindow(true)
+
+        self:SelectFile(newPath)
+
+    else
+
+        local newFileModal = self:GetNewFileModal()
+
+        newFileModal:SetText("New " .. (ext == ".cs" and "C# File" or "Lua"), "code", "Name code file", true)
+
+        pixelVisionOS:OpenModal(newFileModal,
+            function()
+
+                -- Check to see if ok was pressed on the model
+                if(newFileModal.selectionValue == true) then
+
+                    local newPath = UniqueFilePath(defaultPath.AppendFile(newFileModal.inputField.text .. ext))
+                    
+                    local templatePath = templatePath.AppendFile("empty-" .. fileName .. ext)
+
+                    -- TODO if this is a C# file, we need to rename the class
+                    if(ext == ".cs") then
+
+                        local codeTemplate = ReadTextFile(templatePath)
+
+                        local newClassName = newPath.EntityNameWithoutExtension:sub(1,1):upper() .. newPath.EntityNameWithoutExtension:gsub('%W',' '):gsub("%W%l", string.upper):sub(2):gsub('%W','') .. "Class"
+
+                        codeTemplate = codeTemplate:gsub( "CustomClass", newClassName)
+
+
+                        -- print("newClassName", newClassName)
+                        
+                        SaveTextToFile(newPath, codeTemplate)
+
+
+                    else
+
+                        -- Just copy the Lua template as is
+                        CopyTo(templatePath, newPath)
+
+                    end
+
+                    
+                    self:RefreshWindow(true)
+
+                    self:SelectFile(newPath)
+
+                end
+
+            end
+        )   
+
+        -- self:OnNewFile("code", "lua")
+    end
 
 end
 
@@ -194,21 +316,29 @@ function WorkspaceTool:OnEjectDisk()
         return
     end
         
+    local buttons = 
+    {
+        {
+            name = "modalyesbutton",
+            action = function(target)
+                target.onParentClose()
+                EjectDisk(currentSelection.path)
+            end,
+            key = Keys.Enter,
+            tooltip = "Press 'enter' to reset mapping to the default value"
+        },
+        {
+            name = "modalnobutton",
+            action = function(target)
+                target.onParentClose()
+            end,
+            key = Keys.Escape,
+            tooltip = "Press 'esc' to avoid making any changes"
+        }
+    }
+
     -- Ask before ejecting a disk
-    pixelVisionOS:ShowMessageModal("Eject Disk", "Do you want to eject the '".. currentSelection.name .."'disk?", 160, true,
-            function()
-
-                -- Only perform the copy if the user selects OK from the modal
-                if(pixelVisionOS.messageModal.selectionValue) then
-
-                    EjectDisk(currentSelection.path)
-
-                    --ResetGame()
-
-                end
-
-            end
-    )
+    pixelVisionOS:ShowMessageModal("Eject Disk", "Do you want to eject the '".. currentSelection.name .."'disk?", 160, buttons)
 
 end
 
@@ -221,6 +351,18 @@ function WorkspaceTool:UpdateContextMenu()
 
     -- Check to see if currentPath is a game
     local canRun = self.focus == true and self.isGameDir--and pixelVisionOS:ValidateGameInDir(self.currentPath, {"code.lua"})-- and selections
+
+    -- if(canRun) then
+
+    --     if(self.runnerType == "csharp" and PathExists(self.currentPath.AppendFile("code.cs"))) then
+    --         canRun = true
+    --     elseif(self.runnerType == "lua" and PathExists(self.currentPath.AppendFile("lua.cs"))) then
+    --         canRun = true
+    --     else
+    --         canRun = false
+    --     end
+
+    -- end
 
     -- Look to see if the selection is a special file (parent dir or run)
     local specialFile = false
@@ -369,22 +511,29 @@ function WorkspaceTool:OnShutdown()
 
     self:CancelFileActions()
 
-    local runnerName = SystemName()
+    local buttons = 
+    {
+        {
+            name = "modalyesbutton",
+            action = function(target)
+                target.onParentClose()
+                ShutdownSystem()
+                -- Save changes
+                self.shuttingDown = true
+            end,
+            key = Keys.Enter,
+            tooltip = "Press 'enter' to reset mapping to the default value"
+        },
+        {
+            name = "modalnobutton",
+            action = function(target)
+                target.onParentClose()
+            end,
+            key = Keys.Escape,
+            tooltip = "Press 'esc' to avoid making any changes"
+        }
+    }
 
-    local this = self
-
-    pixelVisionOS:ShowMessageModal("Shutdown " .. runnerName, "Are you sure you want to shutdown "..runnerName.."?", 160, true,
-            function()
-                if(pixelVisionOS.messageModal.selectionValue == true) then
-
-                    ShutdownSystem()
-
-                    -- Save changes
-                    this.shuttingDown = true
-
-                end
-
-            end
-    )
+    pixelVisionOS:ShowMessageModal("Shutdown " .. self.runnerName, "Are you sure you want to shutdown "..self.runnerName.."?", 160, buttons)
 
 end

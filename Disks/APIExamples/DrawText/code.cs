@@ -1,4 +1,4 @@
-﻿/**
+/**
 Pixel Vision 8 - DrawText Example
 Copyright(C) 2017, Pixel Vision 8 (http://pixelvision8.com)
 Created by Jesse Freeman(@jessefreeman)
@@ -11,11 +11,11 @@ Learn more about making Pixel Vision 8 games at
 https://www.pixelvision8.com/getting-started
 **/
 
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 
 namespace PixelVision8.Examples
 {
-    class DrawTextExample : GameChip
+    class ExampleGameChip : GameChip
     {
         public override void Init()
         {

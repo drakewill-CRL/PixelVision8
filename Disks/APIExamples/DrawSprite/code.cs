@@ -1,4 +1,4 @@
-﻿/**
+/**
 Pixel Vision 8 - DrawSprite Example
 Copyright(C) 2017, Pixel Vision 8 (http://pixelvision8.com)
 Created by Jesse Freeman(@jessefreeman)
@@ -12,12 +12,12 @@ https://www.pixelvision8.com/getting-started
 **/
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 using PixelVision8.Engine.Utils;
 
 namespace PixelVision8.Examples
 {
-    class DrawSprite : GameChip
+    class ExampleGameChip : GameChip
     {
         // Use floats to store the subpixel position
         private float speed = 5;

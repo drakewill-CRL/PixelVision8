@@ -1,16 +1,16 @@
 function SettingsTool:CreateControllerPanel()
 
     self.buttonSpriteMap = {
-        Up = {spriteData = dpadup, x = 96, y = 72},
-        Down = {spriteData = dpaddown, x = 96, y = 72},
-        Left = {spriteData = dpadleft, x = 96, y = 72},
-        Right = {spriteData = dpadright, x = 96, y = 72},
-        A = {spriteData = actionbtndown, x = 154, y = 82},
-        B = {spriteData = actionbtndown, x = 170, y = 82},
-        Select = {spriteData = startbtndown, x = 124, y = 90},
-        Start = {spriteData = startbtndown, x = 136, y = 90}
+        Up = {spriteData = FindMetaSpriteId("dpadup"), x = 96, y = 72},
+        Down = {spriteData = FindMetaSpriteId("dpaddown"), x = 96, y = 72},
+        Left = {spriteData = FindMetaSpriteId("dpadleft"), x = 96, y = 72},
+        Right = {spriteData = FindMetaSpriteId("dpadright"), x = 96, y = 72},
+        A = {spriteData = FindMetaSpriteId("actionbtndown"), x = 154, y = 82},
+        B = {spriteData = FindMetaSpriteId("actionbtndown"), x = 170, y = 82},
+        Select = {spriteData = FindMetaSpriteId("startbtndown"), x = 124, y = 90},
+        Start = {spriteData = FindMetaSpriteId("startbtndown"), x = 136, y = 90}
     }
-
+    
     self.totalButtons = #ButtonTypes
     self.usedKeysInvalid = true
     self.blinkTime = 0
@@ -26,31 +26,45 @@ function SettingsTool:CreateControllerPanel()
     self.inputButtonGroupData = editorUI:CreateToggleGroup(true)
     self.inputButtonGroupData.onAction = 
     function(value) 
+        
+        
         if(value == 2 and ControllerConnected(self.selectedPlayerID-1) == false) then 
-            pixelVisionOS:ShowMessageModal("No Controller", "It doesn't look like Player " .. self.selectedPlayerID .. "'s controller was detected.", 160, false, 
-            function()
-                self:OnTriggerInputSelection(value)
-            end
-        )
+            local buttons = 
+            {
+                {
+                name = "modalokbutton",
+                action = function(target)
+                    self:OnTriggerInputSelection(value)
+                end,
+                key = Keys.Enter,
+                tooltip = "Press 'enter' to close this warning"
+                }
+            }
+            
+            pixelVisionOS:ShowMessageModal("No Controller", "It doesn't look like Player " .. self.selectedPlayerID .. "'s controller was detected.", 160, buttons)
+
         else
             self:OnTriggerInputSelection(value)
         end
     end
 
-    editorUI:ToggleGroupButton(self.inputButtonGroupData, {x = 96, y = 152, w = 8, h = 8}, "radiobutton", "This is radio button 1.")
-    editorUI:ToggleGroupButton(self.inputButtonGroupData, {x = 144, y = 152, w = 8, h = 8}, "radiobutton", "This is radio button 2.")
+    editorUI:ToggleGroupButton(self.inputButtonGroupData, {x = 96, y = 152, w = 8, h = 8}, "radiobutton", "View keyboard mapping.")
+    editorUI:ToggleGroupButton(self.inputButtonGroupData, {x = 144, y = 152, w = 8, h = 8}, "radiobutton", "View controller mapping.")
 
 
     self.inputFields = {
-        editorUI:CreateInputField({x = 56, y = 80, w = 8}, "", "Up"),
-        editorUI:CreateInputField({x = 56, y = 96, w = 8}, "", "Down"),
-        editorUI:CreateInputField({x = 56, y = 112, w = 8}, "", "Left"),
-        editorUI:CreateInputField({x = 56, y = 128, w = 8}, "", "Right"),
-        editorUI:CreateInputField({x = 120, y = 120, w = 8}, "", "Select"),
-        editorUI:CreateInputField({x = 144, y = 120, w = 8}, "", "Start"),
-        editorUI:CreateInputField({x = 184, y = 120, w = 8}, "", "A"),
-        editorUI:CreateInputField({x = 208, y = 120, w = 8}, "", "B")
+        pixelVisionOS:CreateInputField({x = 56, y = 80, w = 8}, "", "Up"),
+        pixelVisionOS:CreateInputField({x = 56, y = 96, w = 8}, "", "Down"),
+        pixelVisionOS:CreateInputField({x = 56, y = 112, w = 8}, "", "Left"),
+        pixelVisionOS:CreateInputField({x = 56, y = 128, w = 8}, "", "Right"),
+        pixelVisionOS:CreateInputField({x = 120, y = 120, w = 8}, "", "Select"),
+        pixelVisionOS:CreateInputField({x = 144, y = 120, w = 8}, "", "Start"),
+        pixelVisionOS:CreateInputField({x = 184, y = 120, w = 8}, "", "A"),
+        pixelVisionOS:CreateInputField({x = 208, y = 120, w = 8}, "", "B")
     }
+    
+    self.inputBlinkSpriteId = FindMetaSpriteId("inputbuttonon")
+    self.startInputSpriteId = FindMetaSpriteId("startinputon")
 
     -- -- TODO need to create a map for player 1 & 2 controller
 
@@ -105,12 +119,15 @@ function SettingsTool:DrawInputSprite(type)
     local data = self.buttonSpriteMap[type]
 
     if(data ~= nil) then
-        local spriteData = data.spriteData
-        DrawSprites(spriteData.spriteIDs, data.x, data.y, spriteData.width)
+        -- local spriteData = data.spriteData
+        DrawMetaSprite( data.spriteData, data.x, data.y)
+        -- DrawSprites(spriteData.spriteIDs, data.x, data.y, spriteData.width)
     end
 
     if(type == "Select" or type == "Start") then
-        DrawSprites(startinputon.spriteIDs, type == "Select" and 126 or 138, 99, startinputon.width)
+        
+        DrawMetaSprite(self.startInputSpriteId, type == "Select" and 126 or 138, 99)
+        -- DrawSprites(startinputon.spriteIDs, type == "Select" and 126 or 138, 99, startinputon.width)
     else
         self:DrawBlinkSprite()
     end
@@ -207,7 +224,9 @@ function SettingsTool:UpdateControllerPanel()
 end
 
 function SettingsTool:DrawBlinkSprite()
-  DrawSprites(inputbuttonon.spriteIDs, 154, 62, inputbuttonon.width)
+    
+    DrawMetaSprite(self.inputBlinkSpriteId, 154, 62)
+--   DrawSprites(inputbuttonon.spriteIDs, 154, 62, inputbuttonon.width)
 end
 
 function SettingsTool:TriggerPlayerSelection(value)
@@ -218,15 +237,20 @@ function SettingsTool:TriggerPlayerSelection(value)
     -- Display the correct highlight state for the player label
     for i = 1, 2 do
 
-        local spriteData = _G["player"..i..(i == value and "selected" or "up")]
+        -- local spriteData = _G["player"..i..(i == value and "selected" or "up")]
 
-        DrawSprites(spriteData.spriteIDs, 27, 2 + i, spriteData.width, false, false, DrawMode.Tile)
+        local metaSpriteId = FindMetaSpriteId("player"..i..(i == value and "selected" or "up"))
+        DrawMetaSprite(metaSpriteId, 27, 2 + i, false, false, DrawMode.Tile)
+        -- DrawSprites(spriteData.spriteIDs, 27, 2 + i, spriteData.width, false, false, DrawMode.Tile)
     end
 
     -- Update the controller number
-    local spriteData = _G["controller"..value]
+    -- local spriteData = _G["controller"..value]
 
-    DrawSprites(spriteData.spriteIDs, 16, 7, spriteData.width, false, false, DrawMode.Tile)
+    local metaSpriteId = FindMetaSpriteId("controller"..value)
+    DrawMetaSprite(metaSpriteId, 16, 7, false, false, DrawMode.Tile)
+
+    -- DrawSprites(spriteData.spriteIDs, 16, 7, spriteData.width, false, false, DrawMode.Tile)
 
     -- Reset the input selection
     editorUI:SelectToggleButton(self.inputButtonGroupData, self.selectedInputID, false)
@@ -240,11 +264,19 @@ function SettingsTool:OnTriggerInputSelection(value)
 
     -- make sure the controller is connected first
     if(value == 2 and ControllerConnected(self.selectedPlayerID-1) == false) then 
-        pixelVisionOS:ShowMessageModal("No Controller", "It doesn't look like Player " .. self.selectedPlayerID .. "'s controller was detected.", 160, false, 
-        function()
-            self:TriggerInputSelection(value)
-        end
-    )
+        local buttons = 
+        {
+            {
+            name = "modalokbutton",
+            action = function(target)
+                self:OnTriggerInputSelection(value)
+            end,
+            key = Keys.Enter,
+            tooltip = "Press 'enter' to close this warning"
+            }
+        }
+        
+        pixelVisionOS:ShowMessageModal("No Controller", "It doesn't look like Player " .. self.selectedPlayerID .. "'s controller was detected.", 160, buttons)
     else
         self:TriggerInputSelection(value)
     end
@@ -259,10 +291,11 @@ function SettingsTool:TriggerInputSelection(value)
     -- Display the correct highlight state for the player label
     for i = 1, 2 do
 
-    local spriteName = i == 1 and "keyboard" or "controller"
-    local spriteData = _G[spriteName..(i == value and "selected" or "up")]
+        local spriteName = i == 1 and "keyboard" or "controller"
+        local metaSpriteId = FindMetaSpriteId(spriteName..(i == value and "selected" or "up"))
 
-    DrawSprites(spriteData.spriteIDs, pos[i], 19, spriteData.width, false, false, DrawMode.Tile)
+        DrawMetaSprite(metaSpriteId, pos[i], 19, false, false, DrawMode.Tile)
+    -- DrawSprites(spriteData.spriteIDs, pos[i], 19, spriteData.width, false, false, DrawMode.Tile)
     end
 
     for i = 1, #self.inputFields do
@@ -314,7 +347,7 @@ function SettingsTool:GetUsedKeys()
 
     self.usedKeysInvalid = false
 
-    print("rebuild used keys", self.selectedInputID, dump(self.usedControllerKeys))
+    -- print("rebuild used keys", self.selectedInputID, dump(self.usedControllerKeys))
 
   end
 

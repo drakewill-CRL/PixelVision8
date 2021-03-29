@@ -18,29 +18,31 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Runner.Services;
-using PixelVision8.Runner.Utils;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PixelVision8.Player;
 
 namespace PixelVision8.Runner
 {
+
     public class CSharpRunner : GameRunner
     {
 
         // Store the path to the game's files
-        private readonly string gamePath;
-
+        // private readonly string gamePath;
+        private readonly string gameClass;
+        
         /// <summary>
         ///     This constructor saves the path to the game's files and kicks off the base constructor
         /// </summary>
         /// <param name="gamePath"></param>
-        public CSharpRunner(string gamePath) : base()
+        public CSharpRunner(string gamePath, string gameClass) : base(gamePath)
         {
-            this.gamePath = gamePath;
+            // this.gamePath = gamePath;
+            this.gameClass = gameClass;
         }
-
+        
         /// <summary>
         ///     This is called when the runner first starts up.
         /// </summary>
@@ -48,13 +50,24 @@ namespace PixelVision8.Runner
         {
 
             // Configure the runner
-            ConfigureRunner();
-
+            ConfigureDisplayTarget();
+            
             // Manually override scale on boot up
             Scale(1);
 
             // Load the game
             LoadDefaultGame();
+        }
+
+        public override void ActivateEngine(PixelVision engine)
+        {
+            base.ActivateEngine(engine);
+            
+            // Reset the game's resolution before it loads up
+            ResetResolution();
+
+            // Make sure that the first frame is cleared with the default color
+            ActiveEngine.GameChip.Clear();
         }
 
         /// <summary>
@@ -74,7 +87,7 @@ namespace PixelVision8.Runner
             var gameFiles = new List<string>();
 
             // Get only the files we need from the directory base on their extension above.
-            var files = from p in Directory.EnumerateFiles(gamePath)
+            var files = from p in Directory.EnumerateFiles(RootPath)
                         where fileExtensions.Any(val => p.EndsWith(val))
                         select p;
 
@@ -84,28 +97,38 @@ namespace PixelVision8.Runner
                 // Read the binary data and save it along with the file name to the dictionary.
                 gameFiles.Add(file);
             }
+            
+            var chips = new List<string>
+            {
+                typeof(ColorChip).FullName,
+                typeof(SpriteChip).FullName,
+                typeof(TilemapChip).FullName,
+                typeof(FontChip).FullName,
+                typeof(ControllerChip).FullName,
+                typeof(DisplayChip).FullName,
+                typeof(SoundChip).FullName
+            };
 
             // Configure a new PV8 engine to play the game
-            ConfigureEngine();
+            TmpEngine = new PixelVision(chips.ToArray());
 
-            AddGameChip();
+            // Load the default class based on it's full package path
+            TmpEngine.GetChip(gameClass);
 
             var fileHelper = new FileLoadHelper();
+            var imageParser = new PNGParser(Graphics.GraphicsDevice);
 
-            var loader = new Loader(fileHelper, _graphics.GraphicsDevice);
+            var loader = new Loader(fileHelper, imageParser);
 
             // Process the files
-            loader.ParseFiles(gameFiles.ToArray(), _tmpEngine);
+            loader.ParseFiles(gameFiles.ToArray(), TmpEngine);
             loader.LoadAll();
 
             RunGame();
 
         }
 
-        protected virtual void AddGameChip()
-        {
-            // TODO overwrite and add new game
-        }
-
     }
+
+   
 }

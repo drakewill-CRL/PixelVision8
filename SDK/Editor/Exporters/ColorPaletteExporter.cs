@@ -19,16 +19,18 @@
 //
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
-using PixelVision8.Engine.Utils;
+using PixelVision8.Player;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using PixelVision8.Runner;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
-    public class ColorPaletteExporter : IAbstractExporter
+    public class ColorPaletteExporter : IExporter
     {
-        protected Color[] colors;
+        protected ColorData[] colors;
         protected PixelDataExporter exporter;
 
         protected string fullFileName;
@@ -49,27 +51,27 @@ namespace PixelVision8.Runner.Exporters
 
         protected ColorChip colorChip { get; set; }
 
-        public int totalSteps => exporter.totalSteps;
+        public int TotalSteps => exporter.TotalSteps;
 
-        public bool completed => exporter.completed;
+        public bool Completed => exporter.Completed;
 
         public void CalculateSteps()
         {
-            var currentDebugMode = colorChip.debugMode;
+            var currentDebugMode = colorChip.DebugMode;
 
             // Force the color chip to not replace empty colors with background value
-            colorChip.debugMode = true;
+            colorChip.DebugMode = true;
 
             ConfigureColors();
 
             // Restore the color chip debug value
-            colorChip.debugMode = currentDebugMode;
+            colorChip.DebugMode = currentDebugMode;
 
             BuildPixelData();
 
             // Create Pixel Data Exporter
             exporter = new PixelDataExporter(fullFileName, pixels, width, height, colors, imageExporter,
-                colorChip.maskColor);
+                colorChip.MaskColor);
 
             // calculate steps for exporter
             exporter.CalculateSteps();
@@ -93,19 +95,19 @@ namespace PixelVision8.Runner.Exporters
         }
 
         public Dictionary<string, object> Response => exporter.Response;
-        public byte[] bytes => exporter.bytes;
+        public byte[] Bytes => exporter.Bytes;
 
         public string fileName => exporter.fileName;
 
         public virtual void ConfigureColors()
         {
-            colors = ColorUtils.ConvertColors(colorChip.hexColors, colorChip.maskColor, true);
+            colors = ColorUtils.ConvertColors(colorChip.HexColors, colorChip.MaskColor, true).Select(c=> new ColorData(c.R, c.G, c.B)).ToArray();
             //
             // colorChip.colors;
             total = colors.Length;
 
             width = 8;
-            height = (int)Math.Ceiling(total / (float)width);
+            height = (int) Math.Ceiling(total / (float) width);
         }
 
         public virtual void BuildPixelData()

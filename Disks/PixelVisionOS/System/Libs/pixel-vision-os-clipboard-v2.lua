@@ -15,27 +15,23 @@
 -- Shawn Rakowski - @shwany
 --
 
-print("Enable clipboard")
+-- print("Enable clipboard")
 
 function PixelVisionOS:SystemCopy(data)
 
-    self.clipboardContents = data
-
+    SetClipboardText(data)
+    
 end
 
 function PixelVisionOS:SystemPaste()
 
-    autoClear = autoClear or true
-
-    local data = self.clipboardContents
-
-    return data
+    return GetClipboardText()
 
 end
 
 function PixelVisionOS:ClipboardFull()
 
-    return self.enableClipboard == false and false or self.clipboardContents ~= nil
+    return self.enableClipboard == false and false or GetClipboardText() ~= ""
 
 end
 
@@ -47,6 +43,6 @@ end
 
 function PixelVisionOS:ClearClipboard()
 
-    self.clipboardContents = nil
+    ClearClipboardText()
 
 end

@@ -25,9 +25,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner.Gif
 {
-
     internal static class LzwDecoder
     {
         public static byte[] Decode(byte[] bytes, int minCodeSize)
@@ -93,7 +92,7 @@ namespace PixelVision8.Runner.Utils
 
             for (var i = 0; i < (1 << minCodeSize) + 2; i++)
             {
-                dict.Add(i, new List<byte> { (byte)i });
+                dict.Add(i, new List<byte> {(byte) i});
             }
 
             return dict;
@@ -116,5 +115,4 @@ namespace PixelVision8.Runner.Utils
             return value;
         }
     }
-
 }

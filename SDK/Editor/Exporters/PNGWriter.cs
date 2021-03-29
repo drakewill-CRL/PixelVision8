@@ -18,21 +18,20 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
-using PixelVision8.Runner.Utils;
-//using PixelVisionRunner.Utils;
+// using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using MonoGame.Framework.Utilities;
+using PixelVision8.Runner;
+using PixelVisionRunner.Utils;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class PNGWriter : IImageExporter
     {
         //          private const int bitsPerSample = 8;
         private readonly ColorType colorType;
-        private Color[] colorData;
+        private ColorData[] colorData;
 
         public PNGWriter()
         {
@@ -46,7 +45,7 @@ namespace PixelVision8.Runner.Exporters
         //        private int width;
         //        private int height;
 
-        public void Write(int width1, int height1, Stream outputStream, Color[] colors)
+        public void Write(int width1, int height1, Stream outputStream, ColorData[] colors)
         {
             width = width1;
             height = height1;
@@ -64,8 +63,8 @@ namespace PixelVision8.Runner.Exporters
             outputStream.Write(HeaderChunk.PngSignature, 0, HeaderChunk.PngSignature.Length);
             var buffer1 = new HeaderChunk
             {
-                Width = (uint)width1,
-                Height = (uint)height1,
+                Width = (uint) width1,
+                Height = (uint) height1,
                 BitDepth = 8,
                 ColorType = colorType,
                 CompressionMethod = 0,

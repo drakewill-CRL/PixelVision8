@@ -1,4 +1,4 @@
-﻿/**
+/**
 Pixel Vision 8 - Clear Example
 Copyright(C) 2017, Pixel Vision 8 (http://pixelvision8.com)
 Created by Jesse Freeman(@jessefreeman)
@@ -12,12 +12,12 @@ https://www.pixelvision8.com/getting-started
 **/
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 using System;
 
 namespace PixelVision8.Examples
 {
-    class ClearExample : GameChip
+    class ExampleGameChip : GameChip
     {
         // Create a new random generator
         Random random = new Random();
@@ -51,7 +51,7 @@ namespace PixelVision8.Examples
             {
 
                 // Toggle the clear flag
-                clearFlag = !clearFlag;
+                clearFlag = true;
 
                 // Reset the timer
                 time = 0;
@@ -65,12 +65,10 @@ namespace PixelVision8.Examples
             if (clearFlag == true)
             {
                 Clear();
-            }
-            else
-            {
-                Clear(16, 16, display.X - 32, display.Y - 32);
-            }
 
+                clearFlag = false;
+            }
+            
             // Perform the next block of code 10 times
             for (int i = 0; i < 10; i++)
             {

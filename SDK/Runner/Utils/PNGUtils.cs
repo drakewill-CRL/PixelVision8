@@ -18,33 +18,32 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
-using PixelVision8.Engine.Utils;
+// using Microsoft.Xna.Framework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner
 {
     public class Palette
     {
         private readonly string maskHex;
 
-        public IList<Color> colors;
+        public IList<ColorData> colors;
         //        public List<Color> uniqueColors = new List<Color>();
 
         internal Palette(string maskHex = "#FF00FF")
         {
             // TODO this wasn't set before, make sure it still works
             this.maskHex = maskHex;
-            colors = new List<Color>();
+            colors = new List<ColorData>();
         }
 
-        internal Color this[int index] => colors[index];
+        internal ColorData this[int index] => colors[index];
 
-        internal void AddColor(Color color)
+        internal void AddColor(ColorData color)
         {
             //            if (colors.IndexOf(color) == -1)
             //            {
@@ -69,7 +68,7 @@ namespace PixelVision8.Runner.Utils
             //            var oldColor = colors[colorIndex];
 
             // TODO this could be cleaner
-            colors[colorIndex] = ColorUtils.HexToColor(maskHex);
+            colors[colorIndex] = new ColorData(maskHex);
         }
 
         internal void AddAlphaToColors(IList<byte> alphas)
@@ -115,8 +114,8 @@ namespace PixelVision8.Runner.Utils
 
             Length = chunkBytesList.GetRange(0, 4).ToArray().ToUInt();
             DecodeType(chunkBytesList.GetRange(4, 4).ToArray());
-            Data = chunkBytesList.GetRange(8, (int)Length).ToArray();
-            Crc = chunkBytesList.GetRange((int)(8 + Length), 4).ToArray().ToUInt();
+            Data = chunkBytesList.GetRange(8, (int) Length).ToArray();
+            Crc = chunkBytesList.GetRange((int) (8 + Length), 4).ToArray().ToUInt();
 
             if (CrcCheck() == false) throw new Exception("CRC check failed.");
         }
@@ -125,7 +124,7 @@ namespace PixelVision8.Runner.Utils
         {
             var result = new List<byte>();
 
-            var dataLength = (uint)Data.Length;
+            var dataLength = (uint) Data.Length;
             var dataCrc = PngCrc.Calculate(InputToCrcCheck());
 
             result.AddRange(dataLength.ToByteArray());
@@ -193,7 +192,7 @@ namespace PixelVision8.Runner.Utils
 
         internal byte InterlaceMethod { get; set; }
 
-        internal static byte[] PngSignature { get; } = { 137, 80, 78, 71, 13, 10, 26, 10 };
+        internal static byte[] PngSignature { get; } = {137, 80, 78, 71, 13, 10, 26, 10};
 
         internal override void Decode(byte[] chunkBytes)
         {
@@ -203,7 +202,7 @@ namespace PixelVision8.Runner.Utils
             Width = chunkData.Take(4).ToArray().ToUInt();
             Height = chunkData.Skip(4).Take(4).ToArray().ToUInt();
             BitDepth = chunkData.Skip(8).First();
-            ColorType = (ColorType)chunkData.Skip(9).First();
+            ColorType = (ColorType) chunkData.Skip(9).First();
             CompressionMethod = chunkData.Skip(10).First();
             FilterMethod = chunkData.Skip(11).First();
             InterlaceMethod = chunkData.Skip(12).First();
@@ -221,7 +220,7 @@ namespace PixelVision8.Runner.Utils
             chunkData.AddRange(Width.ToByteArray().ToList());
             chunkData.AddRange(Height.ToByteArray().ToList());
             chunkData.Add(BitDepth);
-            chunkData.Add((byte)ColorType);
+            chunkData.Add((byte) ColorType);
             chunkData.Add(CompressionMethod);
             chunkData.Add(FilterMethod);
             chunkData.Add(InterlaceMethod);
@@ -255,7 +254,7 @@ namespace PixelVision8.Runner.Utils
                 var green = chunkData.Skip(3 * i + 1).Take(1).First(); ///(float)byte.MaxValue;
                 var blue = chunkData.Skip(3 * i + 2).Take(1).First(); ///(float)byte.MaxValue;
 
-                Palette.AddColor(new Color(red, green, blue));
+                Palette.AddColor(new ColorData(red, green, blue));
             }
         }
     }
@@ -342,7 +341,7 @@ namespace PixelVision8.Runner.Utils
         {
             var encodedScanline = new byte[scanline.Length + 1];
 
-            encodedScanline[0] = (byte)FilterType.None;
+            encodedScanline[0] = (byte) FilterType.None;
             scanline.CopyTo(encodedScanline, 1);
 
             return encodedScanline;
@@ -357,9 +356,9 @@ namespace PixelVision8.Runner.Utils
 
             for (var x = 1; x < scanline.Length; x++)
             {
-                var priorRawByte = x - bytesPerPixel < 1 ? (byte)0 : result[x - bytesPerPixel];
+                var priorRawByte = x - bytesPerPixel < 1 ? (byte) 0 : result[x - bytesPerPixel];
 
-                result[x] = (byte)((scanline[x] + priorRawByte) % 256);
+                result[x] = (byte) ((scanline[x] + priorRawByte) % 256);
             }
 
             return result;
@@ -369,13 +368,13 @@ namespace PixelVision8.Runner.Utils
         {
             var encodedScanline = new byte[scanline.Length + 1];
 
-            encodedScanline[0] = (byte)FilterType.Sub;
+            encodedScanline[0] = (byte) FilterType.Sub;
 
             for (var x = 0; x < scanline.Length; x++)
             {
-                var priorRawByte = x - bytesPerPixel < 0 ? (byte)0 : scanline[x - bytesPerPixel];
+                var priorRawByte = x - bytesPerPixel < 0 ? (byte) 0 : scanline[x - bytesPerPixel];
 
-                encodedScanline[x + 1] = (byte)((scanline[x] - priorRawByte) % 256);
+                encodedScanline[x + 1] = (byte) ((scanline[x] - priorRawByte) % 256);
             }
 
             return encodedScanline;
@@ -392,7 +391,7 @@ namespace PixelVision8.Runner.Utils
             {
                 var above = previousScanline[x];
 
-                result[x] = (byte)((scanline[x] + above) % 256);
+                result[x] = (byte) ((scanline[x] + above) % 256);
             }
 
             return result;
@@ -402,13 +401,13 @@ namespace PixelVision8.Runner.Utils
         {
             var encodedScanline = new byte[scanline.Length + 1];
 
-            encodedScanline[0] = (byte)FilterType.Up;
+            encodedScanline[0] = (byte) FilterType.Up;
 
             for (var x = 0; x < scanline.Length; x++)
             {
                 var above = previousScanline[x];
 
-                encodedScanline[x + 1] = (byte)((scanline[x] - above) % 256);
+                encodedScanline[x + 1] = (byte) ((scanline[x] - above) % 256);
             }
 
             return encodedScanline;
@@ -423,10 +422,10 @@ namespace PixelVision8.Runner.Utils
 
             for (var x = 1; x < scanline.Length; x++)
             {
-                var left = x - bytesPerPixel < 1 ? (byte)0 : result[x - bytesPerPixel];
+                var left = x - bytesPerPixel < 1 ? (byte) 0 : result[x - bytesPerPixel];
                 var above = previousScanline[x];
 
-                result[x] = (byte)((scanline[x] + Average(left, above)) % 256);
+                result[x] = (byte) ((scanline[x] + Average(left, above)) % 256);
             }
 
             return result;
@@ -436,14 +435,14 @@ namespace PixelVision8.Runner.Utils
         {
             var encodedScanline = new byte[scanline.Length + 1];
 
-            encodedScanline[0] = (byte)FilterType.Average;
+            encodedScanline[0] = (byte) FilterType.Average;
 
             for (var x = 0; x < scanline.Length; x++)
             {
-                var left = x - bytesPerPixel < 0 ? (byte)0 : scanline[x - bytesPerPixel];
+                var left = x - bytesPerPixel < 0 ? (byte) 0 : scanline[x - bytesPerPixel];
                 var above = previousScanline[x];
 
-                encodedScanline[x + 1] = (byte)((scanline[x] - Average(left, above)) % 256);
+                encodedScanline[x + 1] = (byte) ((scanline[x] - Average(left, above)) % 256);
             }
 
             return encodedScanline;
@@ -463,11 +462,11 @@ namespace PixelVision8.Runner.Utils
 
             for (var x = 1; x < scanline.Length; x++)
             {
-                var left = x - bytesPerPixel < 1 ? (byte)0 : result[x - bytesPerPixel];
+                var left = x - bytesPerPixel < 1 ? (byte) 0 : result[x - bytesPerPixel];
                 var above = previousScanline[x];
-                var upperLeft = x - bytesPerPixel < 1 ? (byte)0 : previousScanline[x - bytesPerPixel];
+                var upperLeft = x - bytesPerPixel < 1 ? (byte) 0 : previousScanline[x - bytesPerPixel];
 
-                result[x] = (byte)((scanline[x] + PaethPredictor(left, above, upperLeft)) % 256);
+                result[x] = (byte) ((scanline[x] + PaethPredictor(left, above, upperLeft)) % 256);
             }
 
             return result;
@@ -477,15 +476,15 @@ namespace PixelVision8.Runner.Utils
         {
             var encodedScanline = new byte[scanline.Length + 1];
 
-            encodedScanline[0] = (byte)FilterType.Paeth;
+            encodedScanline[0] = (byte) FilterType.Paeth;
 
             for (var x = 0; x < scanline.Length; x++)
             {
-                var left = x - bytesPerPixel < 0 ? (byte)0 : scanline[x - bytesPerPixel];
+                var left = x - bytesPerPixel < 0 ? (byte) 0 : scanline[x - bytesPerPixel];
                 var above = previousScanline[x];
-                var upperLeft = x - bytesPerPixel < 0 ? (byte)0 : previousScanline[x - bytesPerPixel];
+                var upperLeft = x - bytesPerPixel < 0 ? (byte) 0 : previousScanline[x - bytesPerPixel];
 
-                encodedScanline[x + 1] = (byte)((scanline[x] - PaethPredictor(left, above, upperLeft)) % 256);
+                encodedScanline[x + 1] = (byte) ((scanline[x] - PaethPredictor(left, above, upperLeft)) % 256);
             }
 
             return encodedScanline;

@@ -18,9 +18,8 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine.Services;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -36,11 +35,11 @@ namespace PixelVision8.Runner
     }
 }
 
-namespace PixelVision8.Runner.Services
+namespace PixelVision8.Runner
 {
-    public class LogService : AbstractService
+    public static class Log
     {
-        private readonly string[] logCharacters =
+        private static readonly string[] logCharacters =
         {
             "¡", // 129 Error
             "¢", // 130 Assert
@@ -52,19 +51,22 @@ namespace PixelVision8.Runner.Services
             "¥"
         };
 
-        private readonly StringBuilder sb = new StringBuilder();
+        private static readonly StringBuilder sb = new StringBuilder();
 
-        public List<string> logBuffer = new List<string>();
-        public int totalItems = 100;
+        public static List<string> logBuffer = new List<string>();
 
-        public LogService(int total)
+        // TODO need to add a way to change this and modify the length of the List
+        public static int totalItems = 500;
+
+        // public LogService(int total)
+        // {
+        //     totalItems = total;
+
+        // }
+
+        public static void Print(string logString, LogType type = LogType.Log, string stackTrace = "")
         {
-            totalItems = total;
-        }
-
-        public void UpdateLog(string logString, LogType type = LogType.Log, string stackTrace = "")
-        {
-            var typeCharacter = logCharacters[(int)type];
+            var typeCharacter = logCharacters[(int) type];
 
             // Clear string builder
             sb.Clear();
@@ -84,12 +86,14 @@ namespace PixelVision8.Runner.Services
 
             if (logBuffer.Count > totalItems) logBuffer.RemoveAt(0);
 
-            Debug.WriteLine(sb.ToString());
+            // Debug.WriteLine(sb.ToString());
+
+            Console.WriteLine(sb.ToString());
 
             logBuffer.Add(sb.ToString());
         }
 
-        public List<string> ReadLogItems(int start = 0, int end = -1)
+        public static List<string> ReadLogItems(int start = 0, int end = -1)
         {
             var tmpList = new List<string>();
 
@@ -102,18 +106,18 @@ namespace PixelVision8.Runner.Services
             return tmpList;
         }
 
-        public string ReadLog(int start = 0, int end = -1)
+        public static string ReadLog(int start = 0, int end = -1)
         {
             return string.Join("\n", ReadLogItems(start, end).ToArray());
         }
 
-        public string ReadLastLogItem()
+        public static string ReadLastLogItem()
         {
             return logBuffer.Last();
         }
 
 
-        public void Clear()
+        public static void Clear()
         {
             logBuffer.Clear();
         }

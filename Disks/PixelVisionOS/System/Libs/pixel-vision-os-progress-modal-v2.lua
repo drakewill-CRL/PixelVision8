@@ -19,7 +19,7 @@ function ProgressModal:Configure(title, width)
   -- Reset the modal so it redraws correctly when opened
   self.firstRun = nil
 
-  local width = width or 128
+  width = width or 128
   local height = 88
 
   -- Make sure width and height are on the grid
@@ -50,12 +50,12 @@ function ProgressModal:Open()
     -- Draw the black background
     self.canvas:SetStroke(5, 1)
     self.canvas:SetPattern({0}, 1, 1)
-    self.canvas:DrawRectangle(0, 0, self.canvas.width - 1, self.canvas.height - 1, true)
+    self.canvas:DrawRectangle(0, 0, self.canvas.width, self.canvas.height, true)
 
     -- Draw the brown background
     self.canvas:SetStroke(12, 1)
     self.canvas:SetPattern({11}, 1, 1)
-    self.canvas:DrawRectangle(3, 9, self.canvas.width - 4, self.canvas.height - 4, true)
+    self.canvas:DrawRectangle(2, 8, self.canvas.width - 4, self.canvas.height - 10, true)
 
     local tmpX = (self.canvas.width - (#self.title * 4)) * .5
 
@@ -127,7 +127,13 @@ function ProgressModal:UpdatePercentage(percent)
   -- Progress
   self.canvas:Clear(6, startX + 1, startY + 9, width - 2, 6)
 
-  self.canvas:DrawSprites(self.cancelBtnData.cachedSpriteData["up"].spriteIDs, self.cancelBtnData.rect.x - self.rect.x, self.cancelBtnData.rect.y - self.rect.y, self.cancelBtnData.tiles.w)
+  local metaSpriteId = FindMetaSpriteId("modalcancelbuttonup")
+  local metaSprite = MetaSprite(metaSpriteId)
+
+  -- print("metaSpriteId", metaSpriteId)
+
+  self.canvas:DrawMetaSprite(metaSpriteId, self.cancelBtnData.rect.x - self.rect.x, self.cancelBtnData.rect.y - self.rect.y)
+  -- self.canvas:DrawSprites(self.cancelBtnData.cachedSpriteData["up"].spriteIDs, self.cancelBtnData.rect.x - self.rect.x, self.cancelBtnData.rect.y - self.rect.y, self.cancelBtnData.tiles.w)
 
   self.canvas:DrawPixels(self.rect.x, self.rect.y, DrawMode.TilemapCache)
 

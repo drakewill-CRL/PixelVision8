@@ -1,4 +1,4 @@
-﻿/**
+/**
 Pixel Vision 8 - CalculateDistance Example
 Copyright(C) 2017, Pixel Vision 8 (http://pixelvision8.com)
 Created by Jesse Freeman(@jessefreeman)
@@ -12,12 +12,11 @@ https://www.pixelvision8.com/getting-started
 **/
 
 using Microsoft.Xna.Framework;
-using PixelVision8.Engine;
-using PixelVision8.Engine.Chips;
+using PixelVision8.Player;
 
 namespace PixelVision8.Examples
 {
-    class CalculateDistanceExample : GameChip
+    class ExampleGameChip : GameChip
     {
         private Point pointA = new Point(8, 8);
         private Point pointB = new Point(248, 232);
@@ -27,23 +26,29 @@ namespace PixelVision8.Examples
         public override void Init()
         {
 
+            // Example Title
+            DrawText("CalculateDistance()", 1, 1, DrawMode.Tile, "large", 15);
+            DrawText("C Sharp Example - Drag the mouse to measure the distance", 8, 16, DrawMode.TilemapCache, "medium", 15, -4);
+
             // Create a new canvas and pass this GameChip into the constructor
-            canvas = new Canvas(256, 240, this);
+            canvas = new Canvas(256, 240-32, this);
 
             // Set the canvas stroke to a white 1x1 pixel brush
-            canvas.SetStroke(new[] { 15 }, 1, 1);
+            canvas.SetStroke(15, 1);
 
         }
 
         public override void Update(int timeDelta)
         {
 
-            // Update position B with the MousePosition
+            // // Update position B with the MousePosition
             pointB = MousePosition();
 
             // Calculate the distance between pointA and pointB
             distance = CalculateDistance(pointA.X, pointA.Y, pointB.X, pointB.X);
 
+            Print(distance);
+            
         }
 
         public override void Draw()
@@ -52,21 +57,21 @@ namespace PixelVision8.Examples
             // Redraw the display
             RedrawDisplay();
 
-            // Clear the canvas with the background color
-            canvas.Clear(0);
+            // // Clear the canvas with the background color
+            canvas.Clear(5);
 
-            // Draw 2 circles around each point
-            canvas.DrawCircle(pointA.X - 4, pointA.Y - 4, pointA.X + 4, pointA.Y + 4);
-            canvas.DrawCircle(pointB.X - 4, pointB.Y - 4, pointB.X + 4, pointB.Y + 4);
+            // // Draw 2 circles around each point
+            canvas.DrawEllipse(pointA.X - 4, pointA.Y - 4, 10, 10);
+            canvas.DrawEllipse(pointB.X - 4, pointB.Y - 4, 10, 10);
 
-            // Draw a line between the two points
+            // // Draw a line between the two points
             canvas.DrawLine(pointA.X, pointA.Y, pointB.X, pointB.Y);
 
-            // Draw the distance value above pointB
+            // // Draw the distance value above pointB
             canvas.DrawText(distance.ToString(), pointB.X, pointB.Y - 12, "small", 15, -4);
 
             // Draw the canvas to the display
-            canvas.DrawPixels();
+            canvas.DrawPixels(0, 32);
 
         }
     }

@@ -35,7 +35,8 @@ function PixelVisionOS:CreateIconButton(point, spriteName, label, toolTip, bgCol
     -- Enable the button's doubleClick property
     data.doubleClick = true
     data.open = false
-
+    -- data.iconDragOffset = {x = 24, y = 12}
+    
     data.tilePixelArgs = {nil, data.rect.x, data.rect.y, 48, 48, DrawMode.TilemapCache, 0}
 
     data.onClick = function(tmpData)
@@ -53,7 +54,7 @@ function PixelVisionOS:CreateIconButton(point, spriteName, label, toolTip, bgCol
         self:RedrawIconButton(tmpData)
     end
 
-    data.bgDrawArgs = {data.rect.x, data.rect.y, data.rect.w - 1, data.rect.h, BackgroundColor(), DrawMode.TilemapCache}
+    -- data.bgDrawArgs = {data.rect.x, data.rect.y, data.rect.w - 1, data.rect.h, BackgroundColor(), DrawMode.TilemapCache}
 
     self:CreateIconButtonStates(data, spriteName, label, bgColor)
 
@@ -80,25 +81,44 @@ function PixelVisionOS:CreateIconButtonStates(data, spriteName, text, bgColor)
     data.cachedPixelData = {}
 
     -- Make sure the background has been updated
-    if(bgColor ~= nil) then
-        data.bgDrawArgs[5] = bgColor
-    end
+    -- if(bgColor ~= nil) then
+    --     data.bgDrawArgs[5] = bgColor
+    -- end
 
     if(spriteName == "none") then
 
+        DrawRect( 
+            data.rect.x, 
+            data.rect.y, 
+            data.rect.w - 1, 
+            data.rect.h, 
+            bgColor, 
+            DrawMode.TilemapCache
+        )
         -- Clear the bakground since there is nothing to display
-        editorUI:NewDraw("DrawRect", data.bgDrawArgs)
+        -- editorUI:NewDraw("DrawRect", data.bgDrawArgs)
 
     else
         
         -- A list of states to build
-        local states = {"up", "over", "openup", "selectedup", "disabled", "dragging"}
+        local states = {"up",  "selectedup"}--, "disabled" }
+
+
+        if(data.onOverDropTarget ~= nil) then
+            table.insert(states, "over")
+            table.insert(states, "openup")
+        end
+
+        if(data.dragDelay > -1) then
+            table.insert(states, "dragging")
+        end
+
 
         -- Loop through each state to make a custom sprite for it
         for i = 1, #states do
 
             local state = states[i]
-            local canvas = NewCanvas(data.rect.w - 1, data.rect.h)
+            -- local canvas = NewCanvas(data.rect.w - 1, data.rect.h)
 
             -- Change the sprite state to accommodate for the fact that there is no dragging sprite
             local spriteState = state == "dragging" and "up" or state
@@ -110,30 +130,32 @@ function PixelVisionOS:CreateIconButtonStates(data, spriteName, text, bgColor)
             end
 
             -- Get the background color
-            local bgColor = state ~= "dragging" and data.bgDrawArgs[5] or - 1
-
-            -- Clear the canvas to the default background color
-            canvas:Clear(bgColor)
-
-            -- Set the stroke and pattern to clear any previous icon this draws over
-            canvas:SetStroke(bgColor, 1)
-            canvas:SetPattern({bgColor}, 1, 1)
-
+            local bgColor = state ~= "dragging" and bgColor or - 1
+            
             -- Create states
             if(spriteName == nil) then
                 spriteName = "fileunknown"
             end
 
-            local spriteData = _G[spriteName .. spriteState]
+            local metaSpriteId = FindMetaSpriteId(spriteName .. spriteState)
             
-            if(spriteData ~= nil) then
-                
-                local tmpX = math.floor((data.rect.w - spriteData.width * 8) * .5)
+            if(metaSpriteId > -1) then
 
-                canvas:DrawSprites(spriteData.spriteIDs, tmpX, 0, spriteData.width)
+                if(data.cachedPixelData[states[i]] == nil) then
+
+                    data.cachedPixelData[states[i]] = NewCanvas(data.rect.w - 1, data.rect.h)
+
+                end
+
+                local canvas =  data.cachedPixelData[states[i]]
+
+                -- Clear the canvas to the default background color
+                canvas:Clear(bgColor)
+
+                canvas:DrawMetaSprite(metaSpriteId, 12, 0)
 
                 local lines = {""}
-                local counter = 0
+                -- local counter = 0
                 local maxWidth = 11
                 local maxChars = maxWidth * 2
 
@@ -152,7 +174,7 @@ function PixelVisionOS:CreateIconButtonStates(data, spriteName, text, bgColor)
                 end
 
                 -- Clear the area for the text
-                canvas:DrawRectangle(0, 24, data.rect.w - 2, 14, true)
+                -- canvas:DrawRectangle(0, 24, data.rect.w - 2, 14, true)
 
                 for i = 1, #lines do
 
@@ -186,14 +208,14 @@ function PixelVisionOS:CreateIconButtonStates(data, spriteName, text, bgColor)
                     end
 
                     -- Draw the text
-                    canvas:DrawText(line, x, y, "medium5", textColor, - 4)
+                    canvas:DrawText(line, x, y, "medium", textColor, - 4)
 
                 end
 
                 -- TODO need to look into why we need to force the canvas to draw here before saving
                 canvas:Draw()
                 
-                data.cachedPixelData[states[i]] = canvas
+                
 
             end
         end
@@ -219,8 +241,6 @@ function PixelVisionOS:UpdateIconButton(data, hitRect)
             editorUI:ClearFocus(data)
         end
 
-        -- See if the button needs to be redrawn.
-        -- self:RedrawButton(data)
         data.onRedraw(data)
         -- Shouldn't update the button if its disabled
         return
@@ -253,7 +273,6 @@ function PixelVisionOS:UpdateIconButton(data, hitRect)
     -- Ready to test finer collision if needed
     if(collision or overrideFocus) then
 
-
         if(data.doubleClick == true) then
 
             -- If the button wasn't in focus before, reset the timer since it's about to get focus
@@ -267,6 +286,7 @@ function PixelVisionOS:UpdateIconButton(data, hitRect)
             if(data.doubleClickActive and data.doubleClickTime > data.doubleClickDelay) then
                 data.doubleClickActive = false
             end
+
         end
 
         -- If we are in the collision area, set the focus
@@ -280,6 +300,7 @@ function PixelVisionOS:UpdateIconButton(data, hitRect)
             -- Click the button
             data.onClick(data)
             data.firstPress = true
+            
         elseif(editorUI.collisionManager.mouseDown) then
 
             if(data.firstPress ~= false) then
@@ -434,7 +455,7 @@ function PixelVisionOS:CreateIconGroup(singleSelection)
     data.singleSelection = singleSelection
     data.dragOverTime = 0
     data.dragOverDelay = .3
-    data.drawIconArgs = {nil, 0, 0, 48, 40, false, false, DrawMode.UI}
+    -- data.drawIconArgs = {nil, 0, 0, 47, 40, false, false, DrawMode.UI}
 
     return data
 
@@ -601,55 +622,24 @@ function PixelVisionOS:UpdateIconGroup(data)
 
                 if(editorUI.collisionManager.mousePos.x > - 1 and editorUI.collisionManager.mousePos.y > - 1) then
 
-                    local mouseOffset = {x = 24, y = 12}
+                    -- data.drawIconArgs[1] = btn.cachedPixelData["dragging"].pixels
+                    -- data.drawIconArgs[2] = editorUI.collisionManager.mousePos.x - 24
+                    -- data.drawIconArgs[3] = editorUI.collisionManager.mousePos.y - 12
+                    -- data.drawIconArgs[4] = btn.cachedPixelData["dragging"].width
+                    -- data.drawIconArgs[5] = clipSize.h
 
-                    local clipSize = {x = 0, y = 0, w = 48, h = 40}
-
-                    -- TODO need to save this so it's not being called every time
-                    -- Calculate mask
-                    local displaySize = Display()
-
-                    displaySize.x = displaySize.x - 1
-                    -- TODO think this is a bug in the display size, it shouldn't need to subtract 9, just 1 like the width
-                    displaySize.y = displaySize.y - 9
-                    -- displaySize.width = displaySize.width - 1
-                    -- displaySize.y = displaySize.y - 9
-
-                    if((editorUI.collisionManager.mousePos.x + (clipSize.w / 2)) > displaySize.x) then
-                        clipSize.w = clipSize.w - ((editorUI.collisionManager.mousePos.x + (clipSize.w / 2)) - displaySize.x)
-                    elseif((editorUI.collisionManager.mousePos.x - (clipSize.w / 2)) < 0) then
-
-                        local tmp = clipSize.w - ((editorUI.collisionManager.mousePos.x + (clipSize.w / 2))) + 1
-
-                        clipSize.x = tmp
-                        clipSize.w = clipSize.w - tmp
-
-                        mouseOffset.x = mouseOffset.x - clipSize.x
-
-                    end
-
-                    if((editorUI.collisionManager.mousePos.y + (clipSize.h / 2)) > displaySize.y) then
-                        clipSize.h = clipSize.h - ((editorUI.collisionManager.mousePos.y + (clipSize.h / 2)) - displaySize.y)
-                    elseif((editorUI.collisionManager.mousePos.y - (clipSize.h / 2)) < 4) then
-                        -- clipSize.h = 0
-
-                        local tmp = clipSize.h - ((editorUI.collisionManager.mousePos.y + (clipSize.h / 2))) + 3
-
-                        clipSize.y = tmp
-                        clipSize.h = clipSize.h - tmp
-
-                        mouseOffset.y = mouseOffset.y - clipSize.y
-
-                    end
-
-                    data.drawIconArgs[1] = btn.cachedPixelData["dragging"]:SamplePixels(clipSize.x, clipSize.y, clipSize.w, clipSize.h)
-                    data.drawIconArgs[2] = editorUI.collisionManager.mousePos.x - mouseOffset.x
-                    data.drawIconArgs[3] = editorUI.collisionManager.mousePos.y - mouseOffset.y
-                    data.drawIconArgs[4] = clipSize.w
-                    data.drawIconArgs[5] = clipSize.h
-
+                    DrawPixels(
+                        btn.cachedPixelData["dragging"].pixels,
+                        editorUI.collisionManager.mousePos.x - 24,
+                        editorUI.collisionManager.mousePos.y - 12,
+                        47, 
+                        40, 
+                        false, 
+                        false, 
+                        DrawMode.UI
+                    )
                     -- DrawPixels(btn.cachedPixelData["up"], 0,0)
-                    editorUI:NewDraw("DrawPixels", data.drawIconArgs)
+                    -- editorUI:NewDraw("DrawPixels", data.drawIconArgs)
                     
                     -- TODO need a file count when dragging
                     -- editorUI:NewDraw("DrawText", {string.format("%02d", 1), data.drawIconArgs[2], data.drawIconArgs[3], DrawMode.Sprite, "small", 15, -4})

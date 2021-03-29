@@ -18,14 +18,16 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
+// using Microsoft.Xna.Framework;
 using System.IO;
+using PixelVision8.Runner;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class ImageExporter : AbstractExporter
     {
-        protected Color[] colors;
+        protected ColorData[] colors;
         protected int height;
 
         protected IImageExporter imageExporter;
@@ -33,7 +35,7 @@ namespace PixelVision8.Runner.Exporters
         //        protected int loops;
         protected int width;
 
-        public ImageExporter(string fileName, IImageExporter imageExporter, Color[] colors, int width, int height) :
+        public ImageExporter(string fileName, IImageExporter imageExporter, ColorData[] colors, int width, int height) :
             base(fileName)
         {
             this.imageExporter = imageExporter;
@@ -47,7 +49,7 @@ namespace PixelVision8.Runner.Exporters
         {
             base.CalculateSteps();
 
-            _steps.Add(WriteBytes);
+            Steps.Add(WriteBytes);
         }
 
         protected virtual void WriteBytes()
@@ -58,7 +60,7 @@ namespace PixelVision8.Runner.Exporters
 
                 imageExporter.Write(width, height, stream, colors);
 
-                bytes = stream.ToArray();
+                Bytes = stream.ToArray();
             }
 
             CurrentStep++;

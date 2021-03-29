@@ -62,12 +62,12 @@ function NewFileModal:Open()
   -- Draw the black background
   self.canvas:SetStroke(0, 1)
   self.canvas:SetPattern({0}, 1, 1)
-  self.canvas:DrawRectangle(0, 0, self.canvas.width - 1, self.canvas.height - 1, true)
+  self.canvas:DrawRectangle(0, 0, self.canvas.width, self.canvas.height, true)
 
   -- Draw the brown background
   self.canvas:SetStroke(12, 1)
   self.canvas:SetPattern({11}, 1, 1)
-  self.canvas:DrawRectangle(2, 8, self.canvas.width - 3, self.canvas.height - 3, true)
+  self.canvas:DrawRectangle(2, 8, self.canvas.width - 4, self.canvas.height - 10, true)
 
   local tmpX = (self.canvas.width - (#self.title * 4)) * .5
 
@@ -107,10 +107,11 @@ function NewFileModal:Open()
   table.insert(self.buttons, backBtnData)
   table.insert(self.buttons, cancelBtnData)
 
-  local spriteData = renameinputfield
+  -- local spriteData = renameinputfield
 
-  self.canvas:DrawSprites(spriteData.spriteIDs, 8, 16 + 8, spriteData.width)
-
+  -- self.canvas:DrawSprites(spriteData.spriteIDs, 8, 16 + 8, spriteData.width)
+  self.canvas:DrawMetaSprite(FindMetaSpriteId("renameinputfield"), 8, 16 + 8)
+  
   self.inputField = self.editorUI:CreateInputField({x = self.rect.x + 16, y = self.rect.y + 32, w = 192}, "Untitled", "Enter a new filename.", "file")
 
   local startX = 16

@@ -1,4 +1,4 @@
-﻿//   
+//   
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.  
 //  
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -18,122 +18,103 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using PixelVision8.Engine.Chips;
 using System;
-using System.IO;
+using PixelVision8.Player;
 
-namespace PixelVision8.Runner.Data
+namespace PixelVision8.Runner
 {
-    public class DisplayTarget : DisplayTargetLite
+    public partial class DisplayTarget : AbstractData
     {
-        private bool _useCRT;
-        private Effect crtShader;
-        private Texture2D _colorPalette;
-        private readonly int paletteWidth = 256;
+    
+        private int _gameWidth;
+        private int _gameHeight;
+        private readonly int _displayHeight;
+        private readonly int _displayWidth;
+        private int _monitorScale = 1;
+        private int _totalPixels;
+        private int _visibleWidth;
+        private int _visibleHeight;
+        private float _offsetX;
+        private float _offsetY;
+        private float _scaleX;
+        private float _scaleY;
 
-        public DisplayTarget(GraphicsDeviceManager graphicManager, int width, int height) : base(graphicManager, width, height)
+        public bool Fullscreen { get; set; }
+
+        public DisplayTarget(int width, int height)
         {
+            _displayWidth = Utilities.Clamp(width, 64, 640);
+            _displayHeight = Utilities.Clamp(height, 64, 480);
+            
+            ResetResolution(_displayWidth, _displayHeight);
         }
 
-        public bool useCRT
+        public int MonitorScale
         {
-            get
-            {
-                return _useCRT;
-            }
+            get => _monitorScale;
             set
             {
-                if (crtShader == null) return;
+                var fits = false;
 
-                _useCRT = value;
-
-                crtShader?.Parameters["crtOn"].SetValue(value ? 1f : 0f);
-                crtShader?.Parameters["warp"].SetValue(value ? new Vector2(0.008f, 0.01f) : Vector2.Zero);
-
-            }
-        }
-
-        public float brightness
-        {
-            get => crtShader?.Parameters["brightboost"]?.GetValueSingle() ?? 0;
-            set => crtShader?.Parameters["brightboost"]?.SetValue(MathHelper.Clamp(value, .255f, 1.5f));
-        }
-
-        public float sharpness
-        {
-            get => crtShader?.Parameters["hardPix"]?.GetValueSingle() ?? 0;
-            set => crtShader?.Parameters["hardPix"]?.SetValue(value);
-        }
-
-        public bool HasShader()
-        {
-            return crtShader != null;
-        }
-
-        public Stream shaderPath
-        {
-            set
-            {
-
-                using (var reader = new BinaryReader(value))
+                while (fits == false)
                 {
-                    crtShader = new Effect(GraphicManager.GraphicsDevice,
-                        reader.ReadBytes((int)reader.BaseStream.Length));
+                    var newWidth = _displayWidth * value;
+                    var newHeight = _displayHeight * value;
+
+                    if (newWidth < RealWidth &&
+                        newHeight < RealHeight)
+                    {
+                        fits = true;
+                        _monitorScale = value;
+                    }
+                    else
+                    {
+                        value--;
+                    }
                 }
-
-                useCRT = true;
             }
         }
 
-        public override void ResetResolution(int gameWidth, int gameHeight, int overScanX = 0, int overScanY = 0)
+        public void ResetResolution(int gameWidth, int gameHeight)
         {
-            if (renderTexture == null || renderTexture.Width != gameWidth || renderTexture.Height != gameHeight)
-            {
-                renderTexture = new Texture2D(GraphicManager.GraphicsDevice, gameWidth, gameHeight);
+            _gameWidth = gameWidth;
+            _gameHeight = gameHeight;
 
-                crtShader?.Parameters["textureSize"].SetValue(new Vector2(gameWidth, gameHeight));
-                crtShader?.Parameters["videoSize"].SetValue(new Vector2(gameWidth, gameHeight));
-
-            }
-
-            base.ResetResolution(gameWidth, gameHeight, overScanX, overScanY);
-
+            Invalidate();
+            
         }
 
-
-        public override void RebuildColorPalette(ColorChip colorChip)
+        private void CalculateResolution()
         {
+            
+            var tmpMonitorScale = Fullscreen ? 1 : MonitorScale;
 
-            base.RebuildColorPalette(colorChip);
-
-            // TODO do we need to recreate these two things each time?
-            _colorPalette = new Texture2D(GraphicManager.GraphicsDevice, paletteWidth, (int)Math.Ceiling(CachedColors.Length / (double)paletteWidth));
-            _colorPalette.SetData(CachedColors);
-
-            colorChip.ResetValidation();
-
+            // Calculate the monitor's resolution
+            _visibleWidth = Fullscreen
+                ? RealWidth
+                : _displayWidth *
+                  tmpMonitorScale;
+            _visibleHeight = Fullscreen
+                ? RealHeight
+                : _displayHeight * tmpMonitorScale;
         }
 
-        public override void Render(int[] pixels, int backgroundColor)
+        private void CalculateDisplayScale()
         {
+            // Calculate the game scale
+            _scaleX = (float) _visibleWidth / _gameWidth;
+            _scaleY = (float) _visibleHeight / _gameHeight;
 
-            if (crtShader == null)
-            {
-                base.Render(pixels, backgroundColor);
-            }
-            else
-            {
-                renderTexture.SetData(pixels);
-                SpriteBatch.Begin(SpriteSortMode.Immediate, null, SamplerState.PointClamp);
-                crtShader.CurrentTechnique.Passes[0].Apply();
-                GraphicManager.GraphicsDevice.Textures[1] = _colorPalette;
-                GraphicManager.GraphicsDevice.SamplerStates[1] = SamplerState.PointClamp;
-                SpriteBatch.Draw(renderTexture, offset, VisibleRect, Color.White, 0f, Vector2.Zero, Scale, SpriteEffects.None, 1f);
-                SpriteBatch.End();
-            }
+            // To preserve the aspect ratio,
+            // use the smaller scale factor.
+            _scaleX = Math.Min(_scaleX, _scaleY);
+            _scaleY = _scaleX;
+        }
 
+        private void CalculateDisplayOffset()
+        {
+            _offsetX = (_visibleWidth - _gameWidth * _scaleX) * .5f;
+            _offsetY = (_visibleHeight - _gameHeight * _scaleY) * .5f;
         }
 
     }

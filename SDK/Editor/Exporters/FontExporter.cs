@@ -18,14 +18,14 @@
 // Shawn Rakowski - @shwany
 //
 
-using PixelVision8.Engine;
-using PixelVision8.Engine.Utils;
+using PixelVision8.Player;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class FontExporter : SpriteExporter
     {
-        public FontExporter(string fileName, IEngine engine, IImageExporter imageExporter) : base(fileName, engine,
+        public FontExporter(string fileName, PixelVision engine, IImageExporter imageExporter) : base(fileName, engine,
             imageExporter, engine.FontChip)
         {
         }
@@ -49,19 +49,20 @@ namespace PixelVision8.Runner.Exporters
 
             var total = 96;
 
-            var maxCol = width / spriteChip.width;
+            var maxCol = width / SpriteChip.DefaultSpriteSize;
 
-            var tmpPixelData = new int[spriteChip.width * spriteChip.height];
+            var tmpPixelData = new int[SpriteChip.DefaultSpriteSize * SpriteChip.DefaultSpriteSize];
 
             for (var i = 0; i < total; i++)
             {
-                var pos = MathUtil.CalculatePosition(i, maxCol);
+                var pos = Utilities.CalculatePosition(i, maxCol);
 
                 spriteChip.ReadSpriteAt(i, ref tmpPixelData);
-                PixelDataUtil.SetPixels(tmpPixelData, pos.X * spriteChip.width, pos.Y * spriteChip.height, spriteChip.width, spriteChip.height, textureData);
+                Utilities.SetPixels(tmpPixelData, pos.X * SpriteChip.DefaultSpriteSize, pos.Y * SpriteChip.DefaultSpriteSize, SpriteChip.DefaultSpriteSize,
+                    SpriteChip.DefaultSpriteSize, textureData);
             }
 
-            // var convertedColors = ColorUtils.ConvertColors(engine.ColorChip.hexColors, engine.ColorChip.maskColor, true);
+            // var convertedColors = Utilities.ConvertColors(engine.ColorChip.hexColors, engine.ColorChip.maskColor, true);
 
             // var colors = !(engine.GetChip(ColorMapParser.chipName, false) is ColorChip colorMapChip)
             //     ? engine.ColorChip.colors
@@ -72,7 +73,7 @@ namespace PixelVision8.Runner.Exporters
             // TODO use the colors from the sprite parser this class extends?
 
             exporter = new PixelDataExporter(fullFileName, textureData.Pixels, width, height, colors, imageExporter,
-                engine.ColorChip.maskColor);
+                engine.ColorChip.MaskColor);
         }
     }
 }

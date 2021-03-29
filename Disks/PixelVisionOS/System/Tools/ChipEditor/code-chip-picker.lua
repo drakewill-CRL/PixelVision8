@@ -41,19 +41,19 @@ function EditorUI:CreateChipPicker(rect, itemWidth, itemHeight, total, spriteNam
 
 end
 
-function EditorUI:ConfigureChipPicker(data, type)
-
-  if(data.lastType ~= type) then
+function EditorUI:ConfigureChipPicker(data, options)
+-- print("Configure Picker")
+  -- if(data.lastType ~= type) then
     -- Reset offset
     data.buttonOffset = 0
 
-    data.options = _G[type]
+    data.options = options
 
     self:RedrawChipPickerButtons(data)
 
     data.lastType = type
 
-  end
+  -- end
 
 end
 
@@ -68,10 +68,9 @@ function EditorUI:RedrawChipPickerButtons(data)
   for i = 1, #data.buttons do
 
     local button = data.buttons[i]
-
     button.spriteName = data.options[i + offset]["spriteName"] .. "icon"
     button.toolTip = "Drag the " .. data.options[i + offset]["name"] .. " " .. data.options[i + offset]["type"] .. " chip to the empty socket."
-    self:RebuildSpriteCache(button)
+    self:RebuildMetaSpriteCache(button)
 
   end
 
@@ -143,7 +142,7 @@ function EditorUI:OpenChipPicker(data)
 
   data.open = true
 
-  DrawSprites(selectionpanel.spriteIDs, data.rect.x, data.rect.y + 16, selectionpanel.width, false, false, DrawMode.TilemapCache)
+  DrawMetaSprite(FindMetaSpriteId("selectionpanel"), data.rect.x, data.rect.y + 16, false, false, DrawMode.TilemapCache)
 
   self:Invalidate(data.topButton)
   self:Invalidate(data.bottomButton)
@@ -184,13 +183,13 @@ function EditorUI:DrawChipPicker(data)
 
     local button = data.buttons[data.currentButtonDown]
 
-    local spriteData = _G[button.spriteName .. "up"]
+    local spriteData = FindMetaSpriteId(button.spriteName .. "up")
 
-    if(spriteData ~= nil) then
+    -- if(spriteData ~= nil) then
 
-      DrawSprites(spriteData.spriteIDs, self.collisionManager.mousePos.x - 16, self.collisionManager.mousePos.y - 16, spriteData.width, false, false, DrawMode.Sprite)
+      DrawMetaSprite(spriteData, self.collisionManager.mousePos.x - 16, self.collisionManager.mousePos.y - 16, false, false, DrawMode.UI)
 
-    end
+    -- end
   end
 
 end

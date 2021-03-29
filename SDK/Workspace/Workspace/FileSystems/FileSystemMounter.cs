@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace PixelVision8.Runner.Workspace
+namespace PixelVision8.Workspace
 {
     public class FileSystemMounter : IFileSystem
     {
@@ -38,7 +38,7 @@ namespace PixelVision8.Runner.Workspace
         }
 
         public FileSystemMounter(params KeyValuePair<WorkspacePath, IFileSystem>[] mounts)
-            : this((IEnumerable<KeyValuePair<WorkspacePath, IFileSystem>>)mounts)
+            : this((IEnumerable<KeyValuePair<WorkspacePath, IFileSystem>>) mounts)
         {
         }
 

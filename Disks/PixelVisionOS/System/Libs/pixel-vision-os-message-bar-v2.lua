@@ -28,31 +28,13 @@ function PixelVisionOS:CreateMessageBar(x, y, maxChars, clearColorID)
     currentMessage = "",
     mode = 1,
     invalid = false,
-    clearColorID = clearColorID or nil,
+    clearColorID = clearColorID or 5,
     modes = {
       Empty = 1,
       Message = 2,
       Help = 3
-    }
-  }
-
-  data.textDrawArgs = {
-    "",
-    data.pos.x,
-    data.pos.y,
-    DrawMode.TilemapCache,
-    data.font,
-    data.textColorOffset,
-    data.offset
-  }
-
-  data.clearDrawArgs = {
-    data.pos.x,
-    data.pos.y,
-    data.maxChars * 4,
-    8,
-    -1,
-    DrawMode.TilemapCache
+    },
+    length = 0
   }
 
   return data
@@ -92,21 +74,31 @@ end
 function PixelVisionOS:DrawMessageBar(data)
   if(data.invalid == true) then
     
-    if(data.clearColorID == nil) then 
-      data.clearColorID = BackgroundColor()
-      data.clearDrawArgs[5] = data.clearColorID
-    end
-  
-    local length = data.maxChars - #data.currentMessage + 1
+    self.length = data.maxChars - #data.currentMessage + 1
 
-    if(length < 0) then
-      length = 0
+    if(self.length < 0) then
+      self.length = 0
     end
 
-    data.textDrawArgs[1] = string.upper(data.currentMessage)
-    editorUI:NewDraw("DrawRect", data.clearDrawArgs)
-    editorUI:NewDraw("DrawText", data.textDrawArgs)
-
+    DrawRect( 
+      data.pos.x,
+      data.pos.y,
+      data.maxChars * 4,
+      8,
+      data.clearColorID,
+      DrawMode.TilemapCache
+    )
+    
+    DrawText(
+      string.upper(data.currentMessage),
+      data.pos.x,
+      data.pos.y,
+      DrawMode.TilemapCache,
+      data.font,
+      data.textColorOffset,
+      data.offset
+    )
+    
     editorUI:ResetValidation(data)
   end
 end

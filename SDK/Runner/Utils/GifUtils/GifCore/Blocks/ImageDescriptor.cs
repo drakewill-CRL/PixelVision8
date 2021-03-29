@@ -24,7 +24,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace PixelVision8.Runner.Utils
+namespace PixelVision8.Runner.Gif
 {
     internal class ImageDescriptor : Block
     {
@@ -70,7 +70,7 @@ namespace PixelVision8.Runner.Utils
 
         public List<byte> GetBytes()
         {
-            var bytes = new List<byte> { ImageDescriptorLabel };
+            var bytes = new List<byte> {ImageDescriptorLabel};
 
             bytes.AddRange(BitConverter.GetBytes(ImageLeftPosition));
             bytes.AddRange(BitConverter.GetBytes(ImageTopPosition));
