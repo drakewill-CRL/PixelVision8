@@ -18,10 +18,7 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
-using PixelVision8.Runner;
 using System;
-using System.Text;
 
 namespace PixelVision8.Player
 {
@@ -60,7 +57,7 @@ namespace PixelVision8.Player
         public int speedInBPM
         {
             get => _speedInBPM;
-            set => _speedInBPM = MathHelper.Clamp(value, 1, 480);
+            set => _speedInBPM = Utilities.Clamp(value, 1, 480);
         }
 
         /// <summary>
@@ -101,49 +98,6 @@ namespace PixelVision8.Player
             foreach (var track in tracks) track.Reset();
         }
 
-        public string SerializeData()
-        {
-            var sb = new StringBuilder();
-            JsonUtil.GetLineBreak(sb);
-            sb.Append("{");
-            JsonUtil.GetLineBreak(sb, 1);
-
-            //            sb.Append("\"patternName\":\"");
-            //            sb.Append(songName);
-            //            sb.Append("\",");
-            //            JsonUtil.GetLineBreak(sb, 1);
-
-            sb.Append("\"speedInBPM\":");
-            sb.Append(speedInBPM);
-            sb.Append(",");
-            JsonUtil.GetLineBreak(sb, 1);
-
-            sb.Append("\"tracks\":");
-            JsonUtil.GetLineBreak(sb, 1);
-            sb.Append("[");
-            JsonUtil.indentLevel++;
-            var total = tracks.Length;
-            for (var i = 0; i < total; i++)
-                if (tracks[i] != null)
-                {
-                    JsonUtil.indentLevel++;
-                    var track = tracks[i];
-
-                    if (track != null) sb.Append(track.SerializeData());
-
-                    if (i < total - 1) sb.Append(",");
-
-                    JsonUtil.indentLevel--;
-                }
-
-            JsonUtil.indentLevel--;
-            JsonUtil.GetLineBreak(sb, 1);
-            sb.Append("]");
-
-            JsonUtil.GetLineBreak(sb);
-            sb.Append("}");
-
-            return sb.ToString();
-        }
+        
     }
 }

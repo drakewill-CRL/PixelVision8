@@ -21,18 +21,17 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using PixelVision8.Player;
-using PixelVision8.Player.Audio;
-using PixelVision8.Runner.Chips;
 using PixelVision8.Runner.Exporters;
 using PixelVision8.Runner;
-using PixelVision8.Runner.Workspace;
+using PixelVision8.Workspace;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Buttons = PixelVision8.Player.Buttons;
+using Point = PixelVision8.Player.Point;
 
-namespace PixelVision8.Runner.Editors
+namespace PixelVision8.Editor
 {
     /// <summary>
     ///     This class allows you to edit the current sandbox game.
@@ -59,7 +58,7 @@ namespace PixelVision8.Runner.Editors
         protected DesktopRunner runner;
 
         protected IServiceLocator serviceManager;
-        private SfxrSoundChip soundChip;
+        private SoundChip soundChip;
         private SpriteChip spriteChip;
         private PixelVision targetGame;
         private TilemapChip tilemapChip;
@@ -74,10 +73,10 @@ namespace PixelVision8.Runner.Editors
         /// <param name="workspace"></param>
         /// <param name="luaService"></param>
         //        [MoonSharpHidden]
-        public GameEditor(DesktopRunner runner, IServiceLocator serviceManager)
+        public GameEditor(DesktopRunner runner)
         {
             this.runner = runner;
-            this.serviceManager = serviceManager;
+            this.serviceManager = runner.ServiceManager;
             // Get a reference to the workspace from the runner instance
             workspace = runner.workspaceService as WorkspaceServicePlus;
         }
@@ -94,7 +93,7 @@ namespace PixelVision8.Runner.Editors
                     typeof(FontChip).FullName,
                     typeof(ControllerChip).FullName,
                     typeof(DisplayChip).FullName,
-                    typeof(SfxrSoundChip).FullName,
+                    typeof(SoundChip).FullName,
                     typeof(MusicChip).FullName,
                     typeof(LuaGameChip).FullName
                 };
@@ -177,6 +176,11 @@ namespace PixelVision8.Runner.Editors
             return true;
         }
 
+        public void ImportFromCanvas(Canvas canvas, bool resetChips = true)
+        {
+            
+        }
+
         public void Reset()
         {
             //            targetGame = new PixelVisionEngine(null, null, runner.defaultChips.ToArray());
@@ -207,7 +211,7 @@ namespace PixelVision8.Runner.Editors
             spriteChip = targetGame.SpriteChip;
             fontChip = targetGame.FontChip;
             tilemapChip = targetGame.TilemapChip;
-            soundChip = targetGame.SoundChip as SfxrSoundChip;
+            soundChip = targetGame.SoundChip;
             musicChip = targetGame.MusicChip; // TODO need to create a SfxrMusicChip
 
             //            Console.WriteLine("MC Tracks " + musicChip.totalTracks);
@@ -1459,13 +1463,13 @@ namespace PixelVision8.Runner.Editors
             _gameChip.StopSound(channel);
         }
 
-        public void DrawSpriteBlock(int id, int x, int y, int width = 1, int height = 1, bool flipH = false,
-            bool flipV = false,
-            DrawMode drawMode = DrawMode.Sprite, int colorOffset = 0, bool onScreen = true, bool useScrollPos = true,
-            Rectangle? bounds = null)
-        {
-            throw new NotImplementedException();
-        }
+        // public void DrawSpriteBlock(int id, int x, int y, int width = 1, int height = 1, bool flipH = false,
+        //     bool flipV = false,
+        //     DrawMode drawMode = DrawMode.Sprite, int colorOffset = 0, bool onScreen = true, bool useScrollPos = true,
+        //     Rectangle? bounds = null)
+        // {
+        //     throw new NotImplementedException();
+        // }
 
         /// <summary>
         ///     Get or change the TotalDisks number of sounds
@@ -1499,7 +1503,7 @@ namespace PixelVision8.Runner.Editors
         public void GenerateSound(int index, int template)
         {
             // Create a tmp synth parameter
-            var settings = new SfxrSynthChannel().parameters;
+            var settings = new SoundChannel().parameters;
 
             // Apply sound template
             switch (template)
@@ -1530,7 +1534,7 @@ namespace PixelVision8.Runner.Editors
                     break;
             }
 
-            soundChip.UpdateSound(index, settings.GetSettingsString());
+            soundChip.UpdateSound(index, settings.param);
         }
 
         /// <summary>
@@ -1539,10 +1543,10 @@ namespace PixelVision8.Runner.Editors
         /// <param name="id"></param>
         public void Mutate(int id)
         {
-            var param = new SfxrParams();
-            param.SetSettingsString(soundChip.ReadSound(id).param);
-            param.Mutate();
-            soundChip.UpdateSound(id, param.GetSettingsString());
+            var data = new SoundData("Untitled", soundChip.ReadSound(id).param);
+            // param.SetSettingsString();
+            data.Mutate();
+            soundChip.UpdateSound(id, data.param);
             //            soundChip.ReadSound(id).Mutate();
         }
 
@@ -1769,9 +1773,9 @@ namespace PixelVision8.Runner.Editors
         /// <summary>
         ///     Generate a new song
         /// </summary>
-        public void GenerateSong()
+        public void GenerateSong(bool resetInstruments = false)
         {
-            songGenerator.GenerateSong(targetGame);
+            songGenerator.GenerateSong(targetGame, resetInstruments);
         }
 
         /// <summary>
@@ -1982,12 +1986,12 @@ namespace PixelVision8.Runner.Editors
         {
             //            var scale = 1;
 
-            var blockSizeX = scaleX * SpriteChip.DefaultSpriteSize;
-            var blockSizeY = scaleY * SpriteChip.DefaultSpriteSize;
+            var blockSizeX = scaleX * Constants.SpriteSize;
+            var blockSizeY = scaleY * Constants.SpriteSize;
 
             // var pixelData = new int[blockSizeX * blockSizeY];
 
-            var pos = _gameChip.CalculatePosition(id, spriteChip.TextureWidth / SpriteChip.DefaultSpriteSize);
+            var pos = _gameChip.CalculatePosition(id, spriteChip.TextureWidth / Constants.SpriteSize);
 
             var pixelData = Utilities.GetPixels(spriteChip.PixelData, pos.X * 8, pos.Y * 8, blockSizeX, blockSizeY);
             // spriteChip.texture.CopyPixels(ref pixelData, pos.X * 8, pos.Y * 8, blockSizeX, blockSizeY);
@@ -2007,10 +2011,10 @@ namespace PixelVision8.Runner.Editors
         /// <param name="flipV"></param>
         public void WriteSpriteData(int id, int[] pixelData, int scaleX = 1, int scaleY = 1)
         {
-            var blockSizeX = scaleX * SpriteChip.DefaultSpriteSize;
-            var blockSizeY = scaleY * SpriteChip.DefaultSpriteSize;
+            var blockSizeX = scaleX * Constants.SpriteSize;
+            var blockSizeY = scaleY * Constants.SpriteSize;
 
-            var pos = _gameChip.CalculatePosition(id, spriteChip.TextureWidth / SpriteChip.DefaultSpriteSize);
+            var pos = _gameChip.CalculatePosition(id, spriteChip.TextureWidth / Constants.SpriteSize);
 
             //            var pos = gameChip.CalculatePosition(id, spriteChip.textureWidth / spriteChip.width);
 
@@ -2298,8 +2302,8 @@ namespace PixelVision8.Runner.Editors
             workspacePath = workspacePath.AppendFile(sfx.name + ".wav");
 
             // TODO need to wire this up
-            var synth = new SfxrSynthChannel();
-            synth.parameters.SetSettingsString(sfx.param);
+            var synth = new SoundChannel();
+            synth.parameters.param = sfx.param;
             //            var stream = workspace.CreateFile(path);
 
             var files = new Dictionary<string, byte[]>

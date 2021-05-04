@@ -216,7 +216,7 @@ function WorkspaceTool:CreateNewCodeFile(defaultPath)
 
         local data = ReadJson(infoFilePath)
 
-        print(dump(data))
+        -- print(dump(data))
 
         if(data["runnerType"] ~= nil) then
             ext = data["runnerType"] ~= "lua" and  ".cs" or ".lua"
@@ -230,13 +230,13 @@ function WorkspaceTool:CreateNewCodeFile(defaultPath)
 
     local empty = PathExists(defaultPath.AppendFile(fileName .. ext))
 
-    print("Create new code file at", defaultPath, fileName, ext)
+    -- print("Create new code file at", defaultPath, fileName, ext)
 
     if(empty ~= true) then
 
         local newPath = defaultPath.AppendFile(fileName .. ext)
 
-        print("Create file", templatePath.AppendFile("main-" .. fileName .. ext), "in", defaultPath.AppendFile(fileName .. ext))
+        -- print("Create file", templatePath.AppendFile("main-" .. fileName .. ext), "in", defaultPath.AppendFile(fileName .. ext))
 
         CopyTo(templatePath.AppendFile("main-" .. fileName .. ext), newPath)
 
@@ -270,7 +270,7 @@ function WorkspaceTool:CreateNewCodeFile(defaultPath)
                         codeTemplate = codeTemplate:gsub( "CustomClass", newClassName)
 
 
-                        print("newClassName", newClassName)
+                        -- print("newClassName", newClassName)
                         
                         SaveTextToFile(newPath, codeTemplate)
 
@@ -316,31 +316,40 @@ function WorkspaceTool:OnEjectDisk()
         return
     end
         
+    local buttons = 
+    {
+        {
+            name = "modalyesbutton",
+            action = function(target)
+                target.onParentClose()
+                EjectDisk(currentSelection.path)
+            end,
+            key = Keys.Enter,
+            tooltip = "Press 'enter' to reset mapping to the default value"
+        },
+        {
+            name = "modalnobutton",
+            action = function(target)
+                target.onParentClose()
+            end,
+            key = Keys.Escape,
+            tooltip = "Press 'esc' to avoid making any changes"
+        }
+    }
+
     -- Ask before ejecting a disk
-    pixelVisionOS:ShowMessageModal("Eject Disk", "Do you want to eject the '".. currentSelection.name .."'disk?", 160, true,
-            function()
-
-                -- Only perform the copy if the user selects OK from the modal
-                if(pixelVisionOS.messageModal.selectionValue) then
-
-                    EjectDisk(currentSelection.path)
-
-                    --ResetGame()
-
-                end
-
-            end
-    )
+    pixelVisionOS:ShowMessageModal("Eject Disk", "Do you want to eject the '".. currentSelection.name .."'disk?", 160, buttons)
 
 end
 
 
 function WorkspaceTool:UpdateContextMenu()
 
-    -- print("UpdateContextMenu", inFocus)
+    -- print("UpdateContextMenu")
 
     local selections = self:CurrentlySelectedFiles()
 
+    -- print("selections", dump(selections))
     -- Check to see if currentPath is a game
     local canRun = self.focus == true and self.isGameDir--and pixelVisionOS:ValidateGameInDir(self.currentPath, {"code.lua"})-- and selections
 
@@ -364,11 +373,14 @@ function WorkspaceTool:UpdateContextMenu()
 
     if(selections ~= nil) then
 
+        -- print("self.files", #self.files)
         currentSelection = self.files[selections[1]]
+        -- print("self.totalSingleSelectFiles", self.totalSingleSelectFiles)
+        for i = 1, #selections do
 
-        for i = 1, self.totalSingleSelectFiles do
-
-            local tmpFile = self.files[selections[1]]
+            local tmpFile = self.files[selections[i]]
+            
+            -- print("tmpFile", tmpFile.name, tmpFile.type)
 
             if(tmpFile.type == "installer" or tmpFile.type == "updirectory" or tmpFile.type == "run" or tmpFile.type == "trash" or tmpFile.type == "drive" or tmpFile.type == "disk" ) then
                 specialFile = true
@@ -380,6 +392,8 @@ function WorkspaceTool:UpdateContextMenu()
     end
 
     local trashOpen = self:TrashOpen()
+
+    -- print("currentSelection", currentSelection.type)
 
     -- Test to see if you can rename
     local canEdit = self.focus == true and selections ~= nil and #selections == 1 and specialFile == false and trashOpen == false
@@ -503,22 +517,29 @@ function WorkspaceTool:OnShutdown()
 
     self:CancelFileActions()
 
-    local runnerName = SystemName()
+    local buttons = 
+    {
+        {
+            name = "modalyesbutton",
+            action = function(target)
+                target.onParentClose()
+                ShutdownSystem()
+                -- Save changes
+                self.shuttingDown = true
+            end,
+            key = Keys.Enter,
+            tooltip = "Press 'enter' to reset mapping to the default value"
+        },
+        {
+            name = "modalnobutton",
+            action = function(target)
+                target.onParentClose()
+            end,
+            key = Keys.Escape,
+            tooltip = "Press 'esc' to avoid making any changes"
+        }
+    }
 
-    local this = self
-
-    pixelVisionOS:ShowMessageModal("Shutdown " .. runnerName, "Are you sure you want to shutdown "..runnerName.."?", 160, true,
-            function()
-                if(pixelVisionOS.messageModal.selectionValue == true) then
-
-                    ShutdownSystem()
-
-                    -- Save changes
-                    this.shuttingDown = true
-
-                end
-
-            end
-    )
+    pixelVisionOS:ShowMessageModal("Shutdown " .. self.runnerName, "Are you sure you want to shutdown "..self.runnerName.."?", 160, buttons)
 
 end

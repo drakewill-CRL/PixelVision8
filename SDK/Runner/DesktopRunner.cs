@@ -29,17 +29,15 @@ using MoonSharp.Interpreter;
 using MoonSharp.VsCodeDebugger;
 using MoonSharp.VsCodeDebugger.DebuggerLogic;
 using PixelVision8.Player;
-using PixelVision8.Runner.Editors;
-using PixelVision8.Runner;
-using PixelVision8.Runner.Workspace;
+using PixelVision8.Workspace;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using PixelVision8.Editor;
 using Buttons = PixelVision8.Player.Buttons;
 
 namespace PixelVision8.Runner
@@ -61,6 +59,24 @@ namespace PixelVision8.Runner
         Error
     }
 
+    public partial class LuaService
+    {
+        protected DesktopRunner runner;
+        
+        private readonly WorkspaceServicePlus workspace;
+
+        /// <summary>
+        ///     The LuaService exposes core Runner APIs to the Lua Game Chip
+        /// </summary>
+        /// <param name="runner"></param>
+        public LuaService(DesktopRunner runner)
+        {
+            this.runner = runner;
+
+            workspace = runner.workspaceService as WorkspaceServicePlus;
+        }
+    }
+
     /// <summary>
     ///     This is the main type for your game.
     /// </summary>
@@ -75,13 +91,13 @@ namespace PixelVision8.Runner
             {ActionKeys.RestartKey, Keys.D4}
         };
 
-        private GameEditor _editor;
+        
         public bool autoRunEnabled = true;
         public bool backKeyEnabled = true;
         public BiosService bios;
         protected WorkspacePath biosPath = WorkspacePath.Root.AppendDirectory("App").AppendFile("bios.json");
         protected KeyboardInputChip keyboardInputChip;
-        protected string documentsPath;
+        public string documentsPath;
 
         protected bool ejectingDisk;
 
@@ -104,15 +120,16 @@ namespace PixelVision8.Runner
         protected bool shutdown;
         public string systemName;
         public string SystemVersion;
-        protected string tmpPath;
+        public string tmpPath;
         public WorkspaceService workspaceService;
-        protected WorkspaceServicePlus workspaceServicePlus;
+        public WorkspaceServicePlus workspaceServicePlus;
         public LoadService loadService;
         public IServiceLocator ServiceManager { get; }
-        protected RunnerMode mode;
+        public RunnerMode mode;
         protected bool displayProgress;
         private List<string> bootDisks = new List<string>();
         private Dictionary<string, string> bootBios = new Dictionary<string, string>();
+        private bool invalidateMouse = true;
 
         protected override bool RunnerActive
         {
@@ -241,15 +258,7 @@ namespace PixelVision8.Runner
             bios.ReadBiosData(BiosSettings.SystemName.ToString(), "Pixel Vision 8 Runner") + " " +
             bios.ReadBiosData(BiosSettings.SystemVersion.ToString(), "0.0.0");
 
-        public GameEditor Editor
-        {
-            get
-            {
-                if (_editor == null) _editor = new GameEditor(this, ServiceManager);
-
-                return _editor;
-            }
-        }
+        
 
         public void CreateLoadService()
         {
@@ -260,37 +269,46 @@ namespace PixelVision8.Runner
 
         public override void ConfigureDisplayTarget()
         {
+            
             // Get the virtual monitor resolution
             var tmpRes = bios.ReadBiosData(BiosSettings.Resolution.ToString(), "512x480")
                 .Split('x').Select(int.Parse)
                 .ToArray();
 
-            if (DisplayTarget == null) DisplayTarget = new ShaderDisplayTarget(Graphics, tmpRes[0], tmpRes[1]);
+            if (DisplayTarget == null)
+            {
+                DisplayTarget = new DisplayTarget(tmpRes[0], tmpRes[1])
+                {
+                    GraphicsManager = Graphics
+                };
+            }
 
             Fullscreen(Convert.ToBoolean(
                 bios.ReadBiosData(BiosSettings.FullScreen.ToString(), "False")));
-            StretchScreen(
-                Convert.ToBoolean(
-                    bios.ReadBiosData(BiosSettings.StretchScreen.ToString(), "False")));
+            // StretchScreen(
+            //     Convert.ToBoolean(
+            //         bios.ReadBiosData(BiosSettings.StretchScreen.ToString(), "False")));
             CropScreen(Convert.ToBoolean(
                 bios.ReadBiosData(BiosSettings.CropScreen.ToString(), "True")));
 
             Scale(Convert.ToInt32(bios.ReadBiosData(BiosSettings.Scale.ToString(), "1")));
 
-            if (((ShaderDisplayTarget) DisplayTarget).HasShader() == false)
+            if ( DisplayTarget.HasShader() == false)
             {
                 // Configure CRT shader
                 var shaderPath = WorkspacePath.Parse(bios.ReadBiosData(CRTSettings.CRTEffectPath.ToString(),
                     "/App/Effects/crt-lottes-mg.ogl.mgfxo"));
 
                 if (workspaceService.Exists(shaderPath))
-                    ((ShaderDisplayTarget) DisplayTarget).shaderPath =
+                     DisplayTarget.ShaderPath =
                         workspaceService.OpenFile(shaderPath, FileAccess.Read);
             }
 
-            if (ActiveEngine != null)
-                DisplayTarget.ResetResolution(ActiveEngine.DisplayChip.Width, ActiveEngine.DisplayChip.Height);
-
+            
+            DisplayTarget.ResetResolution(256, 240);
+           
+            DisplayTarget.ConfigureDisplay();
+            
             // Configure the shader from the bios
             Brightness(Convert.ToSingle(bios.ReadBiosData(CRTSettings.Brightness.ToString(), "100")) / 100F);
             Sharpness(Convert.ToSingle(bios.ReadBiosData(CRTSettings.Sharpness.ToString(), "-6")));
@@ -419,9 +437,9 @@ namespace PixelVision8.Runner
         {
             // At this point this game is fully configured so all chips are accessible for extra configuring
 
-            if (mode == RunnerMode.Loading)
-                ((LuaGameChip) engine.GameChip).LuaScript.Globals["DebuggerAttached"] =
-                    new Func<bool>(AwaitDebuggerAttach);
+            // if (mode == RunnerMode.Loading)
+            //     ((LuaGameChip) engine.GameChip).LuaScript.Globals["DebuggerAttached"] =
+            //         new Func<bool>(AwaitDebuggerAttach);
 
             // Save a reference to the controller chip so we can listen for special key events
             keyboardInputChip = engine.KeyboardInputChip;
@@ -430,7 +448,7 @@ namespace PixelVision8.Runner
             BaseActivateEngine(engine);
         }
 
-        private bool AwaitDebuggerAttach()
+        public bool AwaitDebuggerAttach()
         {
             var connected = server.Connected;
 
@@ -485,15 +503,13 @@ namespace PixelVision8.Runner
             // No ned to  call the base method since the logic is copied here
         }
 
-
+        
         public override void ResetResolution()
         {
             base.ResetResolution();
 
-            IsMouseVisible = false;
-            // Update the mouse to use the new monitor scale
-            var scale = ((ShaderDisplayTarget) DisplayTarget).Scale;
-            ActiveEngine.MouseInputChip.MouseScale(scale.X, scale.Y);
+            invalidateMouse = true;
+            
         }
 
         protected void ConfigureRunner()
@@ -845,8 +861,20 @@ namespace PixelVision8.Runner
                 else
                 {
                     base.Draw(gameTime);
+                    
+                    if (invalidateMouse)
+                    {
+                        IsMouseVisible = false;
+                        // Update the mouse to use the new monitor scale
+                        var scale =  DisplayTarget.Scale;
+                        ActiveEngine.MouseInputChip.MouseScale(scale.X, scale.Y);
 
-                    if (Recording) gifEncoder.AddFrame(TimeDelta / 1000f);
+                        invalidateMouse = false;
+                    }
+
+                    // TODO not sure why converting this back to milliseconds didn't work but this appears to speed up the gif animation
+                    if (Recording) gifEncoder.AddFrame(TimeDelta / 500f);
+                    
                 }
 
                 workspaceServicePlus.SaveLog();
@@ -892,7 +920,7 @@ namespace PixelVision8.Runner
             if (bios.ReadBiosData("FileDiskMounting", "True", true) != "False")
             {
                 // Setup Drag and drop support
-                // Window.FileDropped += (o, e) => OnFileDropped(o, e);
+                Window.FileDropped += (o, e) => OnFileDropped(o, e);
                 // Window.FileDropped += (o, e) => OnFileDropped(o, e);
 
                 // Disable auto run when loading up the default disks
@@ -1072,6 +1100,7 @@ namespace PixelVision8.Runner
 
         public void MountDisk(string path)
         {
+
             try
             {
                 mountingDisk = true;
@@ -1094,8 +1123,10 @@ namespace PixelVision8.Runner
 
                 mountingDisk = false;
             }
-            catch
+            catch (System.Exception error)
             {
+
+                Console.WriteLine("Error " + error.Message);
                 // TODO need to make sure we show a better error to explain why the disk couldn't load
                 DisplayError(ErrorCode.NoAutoRun);
             }
@@ -1172,7 +1203,7 @@ namespace PixelVision8.Runner
             typeof(MouseInputChip).FullName,
             typeof(KeyboardInputChip).FullName,
             typeof(DisplayChip).FullName,
-            typeof(SfxrSoundChip).FullName,
+            typeof(SoundChip).FullName,
             typeof(MusicChip).FullName
         };
 
@@ -1198,118 +1229,6 @@ namespace PixelVision8.Runner
                     foreach (var entry in metaData)
                         TmpEngine.SetMetadata(entry.Key, entry.Value);
 
-
-                // Get a reference to the    Lua game
-                var game = TmpEngine.GameChip as LuaGameChip;
-
-                // Get the script
-                var luaScript = game.LuaScript;
-
-                // Limit which APIs are exposed based on the mode for security
-                // if (mode == RunnerMode.Loading)
-                // {
-                luaScript.Globals["StartNextPreload"] = new Action(StartNextPreload);
-                luaScript.Globals["PreloaderComplete"] = new Action(RunGame);
-                luaScript.Globals["ReadPreloaderPercent"] =
-                    new Func<int>(() => (int) MathHelper.Clamp(loadService.Percent * 100, 0, 100));
-
-                // }else
-                if (mode == RunnerMode.Booting)
-                    luaScript.Globals["BootDone"] = new Action<bool>(BootDone);
-                else
-                    luaScript.Globals["LoadGame"] =
-                        new Func<string, Dictionary<string, string>, bool>((path, metadata) =>
-                            Load(path, RunnerMode.Loading, metadata));
-
-                // Global System APIs
-                luaScript.Globals["Brightness"] = new Func<float?, float>(Brightness);
-                luaScript.Globals["Sharpness"] = new Func<float?, float>(Sharpness);
-                luaScript.Globals["SystemVersion"] = new Func<string>(() => SystemVersion);
-                luaScript.Globals["SystemName"] = new Func<string>(() => systemName);
-                luaScript.Globals["SessionID"] = new Func<string>(() => SessionId);
-                luaScript.Globals["ReadBiosData"] = new Func<string, string, string>((key, defaultValue) =>
-                    bios.ReadBiosData(key, defaultValue));
-                luaScript.Globals["WriteBiosData"] = new Action<string, string>(bios.UpdateBiosData);
-
-                luaScript.Globals["ControllerConnected"] = new Func<int, bool>(IsControllerConnected);
-
-
-                // Get a reference to the Lua game
-                // var game = tmpEngine.GameChip as LuaGameChip;
-
-                // Get the script
-                // var luaScript = game.LuaScript;
-
-                luaScript.Globals["EnableAutoRun"] = new Action<bool>(EnableAutoRun);
-                luaScript.Globals["EnableBackKey"] = new Action<bool>(EnableBackKey);
-
-
-                if (mode == RunnerMode.Playing)
-                {
-                    // Inject the PV8 runner special global function
-                    luaScript.Globals["IsExporting"] = new Func<bool>(ExportService.IsExporting);
-                    luaScript.Globals["ReadExportPercent"] = new Func<int>(ExportService.ReadExportPercent);
-                    luaScript.Globals["ReadExportMessage"] =
-                        new Func<Dictionary<string, object>>(ExportService.ReadExportMessage);
-                    luaScript.Globals["ShutdownSystem"] = new Action(ShutdownSystem);
-                    luaScript.Globals["QuitCurrentTool"] = (QuitCurrentToolDelagator) QuitCurrentTool;
-                    luaScript.Globals["RefreshActionKeys"] = new Action(RefreshActionKeys);
-                    luaScript.Globals["DocumentPath"] = new Func<string>(() => documentsPath);
-                    luaScript.Globals["TmpPath"] = new Func<string>(() => tmpPath);
-                    luaScript.Globals["DiskPaths"] = new Func<WorkspacePath[]>(() => workspaceServicePlus.Disks);
-                    luaScript.Globals["SharedLibPaths"] =
-                        new Func<WorkspacePath[]>(() => workspaceServicePlus.SharedLibDirectories().ToArray());
-                    // luaScript.Globals["SaveActiveDisks"] = new Action(() =>
-                    // {
-                    //     var disks = workspaceServicePlus.Disks;
-                    //
-                    //     foreach (var disk in disks) workspaceServicePlus.SaveDisk(disk);
-                    // });
-                    luaScript.Globals["EjectDisk"] = new Action<string>(EjectDisk);
-                    luaScript.Globals["RebuildWorkspace"] = new Action(workspaceServicePlus.RebuildWorkspace);
-                    luaScript.Globals["MountDisk"] = new Action<WorkspacePath>(path =>
-                    {
-                        var segments = path.GetDirectorySegments();
-
-                        var systemPath = Path.PathSeparator.ToString();
-
-                        if (segments[0] == "Disk")
-                        {
-                        }
-                        else if (segments[0] == "Workspace")
-                        {
-                            // TODO the workspace could have a different name so we should check the bios
-                            systemPath = Path.Combine(documentsPath, segments[0]);
-                        }
-
-                        for (var i = 1; i < segments.Length; i++) systemPath = Path.Combine(systemPath, segments[i]);
-
-                        systemPath = Path.Combine(systemPath,
-                            path.IsDirectory ? Path.PathSeparator.ToString() : path.EntityName);
-
-
-                        //                Console.WriteLine("Mount Disk From " + systemPath);
-
-                        MountDisk(systemPath);
-                    });
-
-                    luaScript.Globals["OperatingSystem"] = new Func<string>(OperatingSystem);
-
-                    // Register the game editor with  the lua service
-                    UserData.RegisterType<GameEditor>();
-                    luaScript.Globals["gameEditor"] = Editor;
-                }
-
-                if (mode == RunnerMode.Booting)
-                    // Force the lua script to use this boot done logic instead
-                    luaScript.Globals["BootDone"] = new Action<bool>(BootDone);
-
-                if (mode == RunnerMode.Loading)
-                {
-                    luaScript.Globals["StartUnload"] = new Action(StartUnload);
-                    luaScript.Globals["UnloadProgress"] = new Func<int>(UnloadProgress);
-                    luaScript.Globals["EndUnload"] = new Action(EndUnload);
-                }
             }
             else
             {
@@ -1321,52 +1240,29 @@ namespace PixelVision8.Runner
                     foreach (var entry in metaData)
                         TmpEngine.SetMetadata(entry.Key, entry.Value);
 
-                // ConfigureKeyboard();
-                // ConfiguredControllers();
             }
 
             // TODO moved this out of the normal configuration order so make sure this still makes sense here
             ConfigureKeyboard();
-            // ConfigureControllers();
 
             // Make sure the current state of the system is saved back to the bios
             SaveBiosChanges();
         }
+        
 
-        protected string OperatingSystem()
-        {
-            var os = Environment.OSVersion;
-            var pid = os.Platform;
-            switch (pid)
-            {
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                    return "Windows";
-
-                case PlatformID.Unix:
-                    return "Linux";
-                case PlatformID.MacOSX:
-                    return "Mac";
-                default:
-                    return "Unknown";
-            }
-        }
-
-        protected void StartUnload()
+        public void StartUnload()
         {
             Console.WriteLine("StartUnload");
         }
 
-        protected int UnloadProgress()
+        public int UnloadProgress()
         {
             Console.WriteLine("UnloadProgress");
 
             return 0;
         }
 
-        protected void EndUnload()
+        public void EndUnload()
         {
             Console.WriteLine("EndUnload");
         }
@@ -1510,6 +1406,7 @@ namespace PixelVision8.Runner
                 // Have the workspace run the game from the current path
                 var GameFiles = workspaceService.LoadGame(path);
 
+
                 // Find the right code file to load and remove other code files
 
                 // Ignore CS files by default
@@ -1523,7 +1420,7 @@ namespace PixelVision8.Runner
                     ignoreExtension = metaData["runnerType"] == "csharp" ? ".lua" : ".cs";
                 }
                 // Read the game's meta file to see if the runner is defined there
-                else if (Array.IndexOf(GameFiles, "/Game/info.json") != -1)
+                else if (Array.IndexOf(GameFiles, "/Game/info.json") != -1) // TODO this are is throwing a random issue
                 {
                     var json = workspaceService.ReadTextFromFile(
                         WorkspacePath.Parse(GameFiles[Array.IndexOf(GameFiles, "/Game/info.json")]));
@@ -1706,9 +1603,7 @@ namespace PixelVision8.Runner
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Pixel Vision 8").Location),
-                MetadataReference.CreateFromFile(Assembly.Load("MonoGame.Framework").Location),
-                MetadataReference.CreateFromFile(Assembly.Load("netstandard")
-                    .Location), //Required due to a .NET Standard 2.0 dependency somewhere.
+                MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location), //Required due to a .NET Standard 2.0 dependency somewhere.
                 MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location), //required for Linq
                 MetadataReference.CreateFromFile(Assembly.Load("System.Linq").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("System.Linq.Expressions").Location),
@@ -2000,7 +1895,7 @@ namespace PixelVision8.Runner
             UpdateTitle();
         }
 
-        private delegate void QuitCurrentToolDelagator(Dictionary<string, string> metaData, string tool = null);
+        
 
         public bool IsControllerConnected(int id) => TmpEngine.ControllerChip.GetController(MathHelper.Clamp(id, 0, 1)).IsConnected();
         
@@ -2063,30 +1958,30 @@ namespace PixelVision8.Runner
             return full;
         }
 
-        public bool StretchScreen(bool? value = null)
-        {
-            if (value.HasValue)
-            {
-                ((ShaderDisplayTarget) DisplayTarget).StretchScreen = value.Value;
-                InvalidateResolution();
-            }
-
-            var stretch = ((ShaderDisplayTarget) DisplayTarget).StretchScreen;
-
-            bios.UpdateBiosData(BiosSettings.StretchScreen.ToString(), stretch.ToString());
-
-            return stretch;
-        }
+        // public bool StretchScreen(bool? value = null)
+        // {
+        //     if (value.HasValue)
+        //     {
+        //          DisplayTarget.StretchScreen = value.Value;
+        //         ResetResolution();
+        //     }
+        //
+        //     var stretch =  DisplayTarget.StretchScreen;
+        //
+        //     bios.UpdateBiosData(BiosSettings.StretchScreen.ToString(), stretch.ToString());
+        //
+        //     return stretch;
+        // }
 
         public bool CropScreen(bool? value = null)
         {
             if (value.HasValue)
             {
-                ((ShaderDisplayTarget) DisplayTarget).CropScreen = value.Value;
+                 DisplayTarget.CropScreen = value.Value;
                 InvalidateResolution();
             }
 
-            var crop = ((ShaderDisplayTarget) DisplayTarget).CropScreen;
+            var crop =  DisplayTarget.CropScreen;
 
             bios.UpdateBiosData(BiosSettings.CropScreen.ToString(), crop.ToString());
 
@@ -2101,36 +1996,37 @@ namespace PixelVision8.Runner
         {
             if (toggle.HasValue)
             {
-                ((ShaderDisplayTarget) DisplayTarget).useCRT = toggle.Value;
+                 DisplayTarget.UseCrt = toggle.Value;
                 bios.UpdateBiosData(CRTSettings.CRT.ToString(), toggle.Value.ToString());
                 InvalidateResolution();
             }
 
-            return ((ShaderDisplayTarget) DisplayTarget).useCRT;
+            return  DisplayTarget.UseCrt;
         }
 
         public float Brightness(float? brightness = null)
         {
             if (brightness.HasValue)
             {
-                ((ShaderDisplayTarget) DisplayTarget).brightness = brightness.Value;
+                 DisplayTarget.Brightness = brightness.Value;
                 bios.UpdateBiosData(CRTSettings.Brightness.ToString(), (brightness * 100).ToString());
             }
 
-            return ((ShaderDisplayTarget) DisplayTarget).brightness;
+            return  DisplayTarget.Brightness;
         }
 
         public float Sharpness(float? sharpness = null)
         {
             if (sharpness.HasValue)
             {
-                ((ShaderDisplayTarget) DisplayTarget).sharpness = sharpness.Value;
+                 DisplayTarget.Sharpness = sharpness.Value;
                 bios.UpdateBiosData(CRTSettings.Sharpness.ToString(), sharpness.ToString());
             }
 
-            return ((ShaderDisplayTarget) DisplayTarget).sharpness;
+            return  DisplayTarget.Sharpness;
         }
 
         #endregion
+
     }
 }

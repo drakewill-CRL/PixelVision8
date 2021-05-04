@@ -19,8 +19,6 @@
 //
 
 using System;
-using Microsoft.Xna.Framework;
-using PixelVision8.Player;
 
 namespace PixelVision8.Player
 {
@@ -45,7 +43,7 @@ namespace PixelVision8.Player
         /// </returns>
         public int Clamp(int val, int min, int max)
         {
-            return MathHelper.Clamp(val, min, max);
+            return Utilities.Clamp(val, min, max);
         }
 
         /// <summary>
@@ -121,6 +119,9 @@ namespace PixelVision8.Player
             var dx = x1 - x0;
             var dy = y1 - y0;
             
+            if(dx == 0 || dy == 0)
+                return 0;
+
             int x = dx * dx + dy * dy;
             int s, t;
 

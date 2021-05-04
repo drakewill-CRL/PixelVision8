@@ -18,8 +18,6 @@
 // Shawn Rakowski - @shwany
 //
 
-
-using Microsoft.Xna.Framework.Graphics;
 using PixelVision8.Player;
 using System;
 using System.Collections.Generic;
@@ -29,20 +27,22 @@ using System.Reflection;
 namespace PixelVision8.Runner
 
 {
+    
+    public class FileParser : Attribute
+    {
+        public string FileType;
+        public MethodInfo MethodInfo;
+        public FileFlags FileFlag;
+            
+        public FileParser(string fileType, FileFlags fileFlag)
+        {
+            FileType = fileType;
+            FileFlag = fileFlag;
+        }
+    }
+    
     public partial class Loader
     {
-        public class FileParser : Attribute
-        {
-            public string FileType;
-            public MethodInfo MethodInfo;
-            public FileFlags FileFlag;
-            
-            public FileParser(string fileType, FileFlags fileFlag)
-            {
-                FileType = fileType;
-                FileFlag = fileFlag;
-            }
-        }
 
         public int currentStep;
 

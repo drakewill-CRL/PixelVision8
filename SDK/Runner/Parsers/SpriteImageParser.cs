@@ -21,25 +21,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Xna.Framework;
 using PixelVision8.Player;
 
 namespace PixelVision8.Runner
 {
     public class SpriteImageParser : ImageParser
     {
-        /// <summary>
-        ///     Static method for converting RGB colors into HEX values
-        /// </summary>
-        /// <param name="r">Red value</param>
-        /// <param name="g">Green value</param>
-        /// <param name="b">Blue value</param>
-        /// <returns></returns>
-        public static string RgbToHex(byte r, byte g, byte b)
-        {
-            return "#" + string.Format("{0:X2}{1:X2}{2:X2}", r, g, b);
-        }
-        
         protected ColorChip colorChip;
         protected int cps;
         protected int index;
@@ -69,8 +56,8 @@ namespace PixelVision8.Runner
 
             if (spriteChip != null)
             {
-                spriteWidth = SpriteChip.DefaultSpriteSize;
-                spriteHeight = SpriteChip.DefaultSpriteSize;
+                spriteWidth = Constants.SpriteSize;
+                spriteHeight = Constants.SpriteSize;
             }
         }
 
@@ -94,12 +81,17 @@ namespace PixelVision8.Runner
         {
             cps = spriteChip.ColorsPerSprite;
 
-            totalSprites = ImageData.TotalSprites;
+            // Break the image into rows and columns
+            var cols = (int)Math.Floor((double)ImageData.Width / Constants.SpriteSize);
+            var rows = (int)Math.Floor((double) ImageData.Height / Constants.SpriteSize);
+            
+            totalSprites = cols * rows;
 
-            //TODO this needs to be double checked at different size sprites
-            var cols = (int)Math.Floor((double)spriteChip.TextureWidth / spriteWidth);
-            var rows = (int)Math.Floor((double)spriteChip.TextureHeight / spriteHeight);
+            // Switch over to the sprite chip dimensions
+            cols = (int)Math.Floor((double)spriteChip.TextureWidth / spriteWidth);
+            rows = (int)Math.Floor((double)spriteChip.TextureHeight / spriteHeight);
 
+            // Calculate the total sprites the spriteChip can hold
             maxSprites = cols * rows;
 
             // // Keep track of number of sprites added
@@ -111,16 +103,16 @@ namespace PixelVision8.Runner
         public virtual void CreateImage()
         {
             // Get the chip colors and replace any transparent ones with the first color so we don't parse transparency
-            var colorData = DisplayTarget.ConvertColors(colorChip.HexColors, colorChip.MaskColor);
+            var colorData = ColorUtils.ConvertColors(colorChip.HexColors, colorChip.MaskColor);
 
             // colorData = colorChip.colors;
 
-            var colorRefs = colorData.Select(c => RgbToHex(c.R, c.G, c.B)).ToArray();
+            var colorRefs = colorData.Select(c => ColorUtils.RgbToHex(c)).ToArray();
 
             // Remove the colors that are not supported
             Array.Resize(ref colorRefs, colorChip.TotalUsedColors);
 
-            var imageColors = Parser.ColorPalette.Select(c => RgbToHex(c.R, c.G, c.B)).ToArray();
+            var imageColors = Parser.ColorPalette.Select(c => ColorUtils.RgbToHex(c)).ToArray();
 
             var colorMap = new string[colorRefs.Length];
 
@@ -189,7 +181,7 @@ namespace PixelVision8.Runner
             }
 
             // Convert all of the pixels into color ids
-            var pixelIDs = Parser.ColorPixels.Select(c => Array.IndexOf(colorMap, RgbToHex(c.R, c.G, c.B)))
+            var pixelIDs = Parser.ColorPixels.Select(c => Array.IndexOf(colorMap, ColorUtils.RgbToHex(c)))
                 .ToArray();
 
             ImageData = new ImageData(Parser.Width, Parser.Height, pixelIDs, colorMap);
@@ -233,7 +225,7 @@ namespace PixelVision8.Runner
                 }
                 else
                 {
-                    if (SpriteChip.IsEmpty(spriteData) == false)
+                    if (Utilities.IsEmpty(spriteData) == false)
                     {
                         spriteChip.UpdateSpriteAt(index, spriteData);
                         spritesAdded++;
@@ -244,7 +236,7 @@ namespace PixelVision8.Runner
 
         public virtual void ConvertColorsToIndexes(int totalColors)
         {
-            spriteData = ImageData.GetSpriteData(index, totalColors);
+            spriteData = Utilities.GetSpriteData(ImageData.PixelData, index, totalColors);
         }
 
         public override void Dispose()

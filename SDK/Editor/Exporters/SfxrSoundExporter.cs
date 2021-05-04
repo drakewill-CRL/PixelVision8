@@ -21,20 +21,21 @@
 using PixelVision8.Player;
 using PixelVision8.Runner;
 using System.Text;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class SfxrSoundExporter : AbstractExporter
     {
         private readonly PixelVision targetEngine;
         private StringBuilder sb;
-        private SfxrSoundChip _sfxrSoundChip;
+        private SoundChip _sfxrSoundChip;
 
         public SfxrSoundExporter(string fileName, PixelVision targetEngine) : base(fileName)
         {
             this.targetEngine = targetEngine;
 
-            _sfxrSoundChip = targetEngine.SoundChip as SfxrSoundChip;
+            _sfxrSoundChip = targetEngine.SoundChip;
 
             //            CalculateSteps();
         }

@@ -25,12 +25,11 @@ LoadScript("pixel-vision-ui-slider-v4")
 LoadScript("pixel-vision-ui-knob-v3")
 LoadScript("pixel-vision-ui-button-v3")
 LoadScript("pixel-vision-ui-toggle-group-v2")
-LoadScript("pixel-vision-ui-text-v2")
-LoadScript("pixel-vision-ui-text-editor-v2")
+LoadScript("pixel-vision-ui-text-editor-v3")
 LoadScript("pixel-vision-ui-input-field-v3")
 LoadScript("pixel-vision-ui-input-area-v3")
 LoadScript("pixel-vision-ui-mouse-cursor-v2")
-LoadScript("pixel-vision-ui-picker-v2")
+LoadScript("pixel-vision-ui-picker-v3")
 LoadScript("pixel-vision-ui-number-stepper-v2")
 LoadScript("pixel-vision-ui-string-stepper-v2")
 
@@ -60,8 +59,8 @@ function EditorUI:Init()
     _editorUI.refreshDelay = .1
     _editorUI.refreshTime = 0
 
-    _editorUI.drawCalls = {}
-    _editorUI.drawCallTotal = 0
+    -- _editorUI.drawCalls = {}
+    -- _editorUI.drawCallTotal = 0
 
     _editorUI.codeEditorClipboardValue = nil
 
@@ -97,17 +96,6 @@ end
 
 function EditorUI:Draw()
 
-    -- The collision manager doesn't contain any draw logic so we don't need to use it here.
-
-    -- Execute each draw
-    for i = 1, self.drawCallTotal do
-        self.drawCalls[i].Draw()
-    end
-
-    -- Clear the draw calls for the next frame
-    self.drawCalls = {}
-    self.drawCallTotal = 0
-
     -- Draw the mouse cursor. This should be the last UI draw call so it is always on top.
     self.mouseCursor:Draw()
 
@@ -115,14 +103,11 @@ end
 
 function EditorUI:Shutdown()
 
-    -- Clear the draw calls for shutting down
-    self.drawCalls = {}
-    self.drawCallTotal = 0
-
 end
 
 function EditorUI:CreateData(rect, spriteName, toolTip, forceDraw)
 
+    -- TODO this should use the NewRect() Api and not a rect object
     local data = {
         rect = rect,
         spriteName = spriteName,
@@ -161,54 +146,40 @@ function EditorUI:CreateData(rect, spriteName, toolTip, forceDraw)
 
     end
 
-    self:RebuildSpriteCache(data)
+    
+    self:RebuildMetaSpriteCache(data)
 
     return data
 
 end
 
-function EditorUI:RebuildSpriteCache(data, invalidate)
+function EditorUI:RebuildMetaSpriteCache(data, spriteName)
 
-    invalidate = invalidate or true
-    local spriteName = data.spriteName
+    -- Look for the sprite name or use the one that is provided
+    spriteName = spriteName or data.spriteName
 
     -- If a sprite name is provided then look for the correct sprite states
     if(spriteName ~= nil) then
-        data.cachedSpriteData = {
-            up = spriteName .. "up",
-            down = spriteName .. "down" ~= nil and spriteName .. "down" or spriteName .. "selectedup",
-            over = spriteName .. "over",
-            selectedup = spriteName .. "selectedup",
-            selectedover = spriteName .. "selectedover",
-            selecteddown = spriteName .. "selecteddown" ~= nil and spriteName .. "selecteddown" or spriteName .. "selectedover",
-            disabled = spriteName .. "disabled",
-            empty = spriteName .. "empty" -- used to clear the sprites
+
+        -- Make sure the sprite name is up to date
+        data.spriteName = spriteName
+
+        -- Find meta sprites for each of the button states
+        data.cachedMetaSpriteIds = {
+            up = FindMetaSpriteId(spriteName .. "up"),
+            down = FindMetaSpriteId(spriteName .. "down" ~= nil and spriteName .. "down" or spriteName .. "selectedup"),
+            over = FindMetaSpriteId(spriteName .. "over"),
+            selectedup = FindMetaSpriteId(spriteName .. "selectedup"),
+            selectedover = FindMetaSpriteId(spriteName .. "selectedover"),
+            selecteddown = FindMetaSpriteId(spriteName .. "selecteddown" ~= nil and spriteName .. "selecteddown" or spriteName .. "selectedover"),
+            disabled = FindMetaSpriteId(spriteName .. "disabled"),
+            empty = FindMetaSpriteId(spriteName .. "empty") -- used to clear the sprites
         }
+
     end
 
+    -- Invalidate the button so it redraws on the next frame
     self:Invalidate(data)
-
-end
-
-function EditorUI:NewDraw(callName, args)
-
-    -- Create a new draw call wrapper
-    local drawCall = {
-
-        -- Create the draw function that calls a draw method and passes in arguments
-        Draw = function()
-            --print("NewDraw", callName, dump(args))
-            -- Call the global draw function
-            _G[callName](unpack(args))
-        end
-
-    }
-
-    -- Add the draw call to the queue
-    table.insert(self.drawCalls, drawCall)
-
-    -- Update the total so we don't have to calculate this in the render loop
-    self.drawCallTotal = #self.drawCalls
 
 end
 

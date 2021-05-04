@@ -23,8 +23,6 @@
 //
 // to see how much I can put in a comment
 
-using Microsoft.Xna.Framework;
-
 namespace PixelVision8.Player
 {
     
@@ -129,6 +127,16 @@ namespace PixelVision8.Player
             if (id.HasValue) ColorChip.BackgroundColor = id.Value;
 
             return ColorChip.BackgroundColor;
+        }
+
+        public string MaskColor(string value = "")
+        {
+            if(value != "")
+            {
+                ColorChip.MaskColor = value;
+            }
+
+            return ColorChip.MaskColor;
         }
 
         /// <summary>

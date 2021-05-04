@@ -23,6 +23,23 @@ function PixelVisionOS:ResetUndoHistory(data)
   data.undoStack = {} -- Keep a stack of undo info, each one is {self, state}
   data.redoStack = {} -- Keep a stack of redo info, each one is {data, state}
 
+  -- Add Callbacks
+  data.OnUndo = function (targetData)
+
+    pixelVisionOS:Undo(targetData)
+
+    self:UpdateHistoryButtons(targetData)
+    
+  end
+
+  data.OnRedo = function (targetData)
+
+    pixelVisionOS:Redo(targetData)
+  
+    self:UpdateHistoryButtons(targetData)
+  
+  end
+
 end
 
 -- return whether the operation is undoable
@@ -43,7 +60,7 @@ end
 -- NOTE: Make sure to balance each call to :BeginUndoable(data) with a call
 -- to :EndUndoable(data). They can nest fine, just don't forget one.
 function PixelVisionOS:BeginUndoable(data)
-  print("test start", data)
+
   if data.currentUndo then
     -- we have already stashed the data & state, just track how deep we are
     data.currentUndo.count = data.currentUndo.count + 1
@@ -58,7 +75,7 @@ end
 
 -- Call :EndUndoable(data) after each modification to the text in the editor.
 function PixelVisionOS:EndUndoable(data)
-  print("test end",data)
+  
   -- We might be inside several nested calls to begin/endUndoable
   data.currentUndo.count = data.currentUndo.count - 1
   -- If this was the last of the nesting
@@ -86,7 +103,7 @@ function PixelVisionOS:Undo(data)
   table.insert(data.redoStack, data:GetState())
 
   -- restore the cursor state
-  data:SetState(state)
+  self:SetState(state)
 
 end
 
@@ -103,78 +120,31 @@ function PixelVisionOS:Redo(data)
   table.insert(data.undoStack, data:GetState())
   
   -- restore the cursor state
-  data:SetState(state)
+  self:SetState(state)
 end
 
+function PixelVisionOS:UpdateHistoryButtons(data)
 
+  self:EnableMenuItemByName("Undo", self:IsUndoable(data))
+  self:EnableMenuItemByName("Redo", self:IsRedoable(data))
 
+end
 
+function PixelVisionOS:BeginUndo(data)
+  self:BeginUndoable(data)
+end
 
+function PixelVisionOS:EndUndo(data)
+  self:EndUndoable(data)
+  self:UpdateHistoryButtons(data)
+end
 
+function PixelVisionOS:SetState(state)
 
+  if(state.Action == nil) then
+      return
+  end
 
--- function PixelVisionOS:ResetUndoHistory()
---   -- 2 stacks
---   data.undoHistory = {}
---   data.redoHistory = {}
--- end
+  state:Action()
 
--- -- push object to top of undo stack
--- function PixelVisionOS:AddUndoHistory(o)
---   print("Add State", dump(o))
---   o.action = #data.undoHistory
---   table.insert(data.undoHistory, o)
---   -- data.undoHistory[#data.undoHistory + 1] = o
-
---   -- Clear Redo
---   data.redoHistory = {}
--- end
-
--- -- push object to top of undo stack
--- function PixelVisionOS:AddRedoHistory(o)
-
---   table.insert(data.redoHistory, o)
-  
--- end
-
--- -- return whether the operation is undoable
--- function PixelVisionOS:IsUndoable()
---   return #data.undoHistory > 0
--- end
-
--- -- return whether the operation is redoable
--- function PixelVisionOS:IsRedoable()
---   print("undo", dump(data.undoHistory),"\n redo", dump(data.redoHistory))
---   return #data.redoHistory > 0
--- end
-
--- -- undo last operation at top of stack, execute Undo() if available
--- function PixelVisionOS:Undo()
---   if #data.undoHistory > 0 then
---     local o = data.undoHistory[#data.undoHistory]
-
---     table.insert(data.redoHistory, o)
---     table.remove(data.undoHistory, #data.undoHistory)
-    
---     return o
---   else
---     return nil
---   end
--- end
-
--- -- redo last undo operation and save it to the undo stack
--- -- execute Redo() if available
--- function PixelVisionOS:Redo()
---   if #data.redoHistory > 0 then
---     local o = data.redoHistory[#data.redoHistory]
-
---     table.insert(data.undoHistory, o)
---     table.remove(data.redoHistory, #data.redoHistory)
---     -- data.redoHistory[#data.redoHistory] = nil
---     -- data.undoHistory[#data.undoHistory + 1] = o
-
---     return o
---   else
---     return nil
---   end
--- end
+end

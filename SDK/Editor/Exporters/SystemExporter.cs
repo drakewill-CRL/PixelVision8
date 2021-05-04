@@ -21,8 +21,9 @@
 using PixelVision8.Player;
 using PixelVision8.Runner;
 using System.Text;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class SystemExporter : AbstractExporter
     {
@@ -71,7 +72,7 @@ namespace PixelVision8.Runner.Exporters
 
             // Serialize Sound
             if (engine.SoundChip != null /* && engine.SoundChip.export*/)
-                Steps.Add(delegate { SerializeSoundChip(engine.SoundChip as SfxrSoundChip); });
+                Steps.Add(delegate { SerializeSoundChip(engine.SoundChip); });
 
             // Serialize Sprite
             if (engine.SpriteChip != null)
@@ -326,7 +327,7 @@ namespace PixelVision8.Runner.Exporters
             CurrentStep++;
         }
 
-        private void SerializeSoundChip(SfxrSoundChip soundChip)
+        private void SerializeSoundChip(SoundChip soundChip)
         {
             JsonUtil.GetLineBreak(sb);
             sb.Append("\"SoundChip\":");

@@ -27,7 +27,7 @@ using System.Linq;
 using System.Text;
 using PixelVision8.Player;
 
-namespace PixelVision8
+namespace PixelVision8.Editor
 {
     class BackgroundScriptRunner : AbstractExporter
     {
@@ -130,7 +130,7 @@ namespace PixelVision8
         {
             try
             {
-                var palette = imageData.Colors.Select(DisplayTarget.HexToColor).ToArray();
+                var palette = imageData.Colors.Select(c=> new ColorData(c)).ToArray();
 
                 var imageExporter = new PNGWriter();
 

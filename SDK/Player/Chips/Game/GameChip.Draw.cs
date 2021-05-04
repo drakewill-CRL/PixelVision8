@@ -18,7 +18,7 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
+using System;
 
 namespace PixelVision8.Player
 {
@@ -99,8 +99,7 @@ namespace PixelVision8.Player
 
                 default:
 
-                    DisplayChip.NewDrawCall(pixelData, x, y, blockWidth, blockHeight, (byte) drawMode, flipH, flipV,
-                        colorOffset);
+                    DisplayChip.NewDrawCall(pixelData, x, y, blockWidth, blockHeight, (byte) drawMode, flipH, flipV, colorOffset);
 
                     break;
             }
@@ -156,7 +155,7 @@ namespace PixelVision8.Player
 
             if (drawMode == DrawMode.Tile)
             {
-                Tile(x, y, id, colorOffset);
+                Tile(x, y, id, colorOffset, null, flipH, flipV);
             }
             else
             {
@@ -246,12 +245,13 @@ namespace PixelVision8.Player
         public void DrawTilemap(int x = 0, int y = 0, int columns = 0, int rows = 0, int? offsetX = null,
             int? offsetY = null)
         {
+            // TODO this is expensive. Should cache this calculation somehow
             DisplayChip.NewDrawCall(
                 TilemapChip,
                 x,
                 y,
-                columns == 0 ? DisplayChip.Width : columns * SpriteChip.DefaultSpriteSize,
-                rows == 0 ? DisplayChip.Height : rows * SpriteChip.DefaultSpriteSize,
+                Math.Min(DisplayChip.Width , (columns == 0 ? TilemapChip.Columns : columns) * Constants.SpriteSize),
+                Math.Min(DisplayChip.Height, (rows == 0 ? TilemapChip.Rows : rows) * Constants.SpriteSize),
                 (byte) DrawMode.Tile,
                 false,
                 false,

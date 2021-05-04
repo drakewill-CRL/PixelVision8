@@ -58,7 +58,7 @@ function MouseCursor:Init()
             spriteData = "cursortext",
             offset = {
                 x = -4,
-                y = -10
+                y = -8
             }
         },
 
@@ -109,8 +109,8 @@ function MouseCursor:Init()
         {
             spriteData = "cursorhandmove",
             offset = {
-                x = -8,
-                y = -8
+                x = -6,
+                y = -1
             }
         },
     }
@@ -162,7 +162,7 @@ function MouseCursor:Draw()
             self.pos.y + self.cursorData.offset.y,
             false,
             false,
-            DrawMode.SpriteAbove
+            10 -- This forces a layer higher than the default DrawModes
         )
            
     end

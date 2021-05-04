@@ -18,7 +18,6 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
 using System;
 
 namespace PixelVision8.Player
@@ -37,7 +36,7 @@ namespace PixelVision8.Player
     {
         private SpriteChip SpriteChip;
 
-        public bool autoImport;
+        public bool autoImport = true;
 
         public TileData[] tiles;
         private int _columns;
@@ -73,7 +72,7 @@ namespace PixelVision8.Player
         public int Columns
         {
             get => _columns;
-            private set => _columns = MathHelper.Clamp(value, 0, 255);
+            private set => _columns = Utilities.Clamp(value, 0, 255);
         }
 
         /// <summary>
@@ -82,7 +81,7 @@ namespace PixelVision8.Player
         public int Rows
         {
             get => _rows;
-            private set => _rows = MathHelper.Clamp(value, 0, 255);
+            private set => _rows = Utilities.Clamp(value, 0, 255);
         }
 
         private bool _invalid;
@@ -139,8 +138,8 @@ namespace PixelVision8.Player
         public void Resize(int newColumns, int newRows, bool clear = true)
         {
             // Make sure we keep the value in range
-            Columns = MathHelper.Clamp(newColumns, 1, 256);
-            Rows = MathHelper.Clamp(newRows, 1, 256);
+            Columns = Utilities.Clamp(newColumns, 1, 256);
+            Rows = Utilities.Clamp(newRows, 1, 256);
 
             // Resize the tile array
             Array.Resize(ref tiles, Columns * Rows);
@@ -196,11 +195,11 @@ namespace PixelVision8.Player
             // Get a reference to the Sprite Chip
             SpriteChip = Player.SpriteChip;
 
-            _tileSize = new Rectangle(0, 0, SpriteChip.DefaultSpriteSize, SpriteChip.DefaultSpriteSize);
+            _tileSize = new Rectangle(0, 0, Constants.SpriteSize, Constants.SpriteSize);
 
             _tmpPixelData = new PixelData(_tileSize.Width, _tileSize.Height);
             
-            pixels = new int[SpriteChip.DefaultSpriteSize * SpriteChip.DefaultSpriteSize];
+            pixels = new int[Constants.SpriteSize * Constants.SpriteSize];
             
             // Resize to default nes resolution
             Resize(32, 30);
@@ -226,7 +225,7 @@ namespace PixelVision8.Player
                     // Draw the pixel data into the cachedTilemap
                     Utilities.MergePixels(_tmpPixelData, 0, 0, _tileSize.Width, _tileSize.Height, _tilemapCache,
                         _pos.X * _tileSize.Width, _pos.Y * _tileSize.Height, _tile.FlipH,
-                        _tile.FlipH, _tile.ColorOffset, false);
+                        _tile.FlipV, _tile.ColorOffset, false);
                 }
             }
 

@@ -18,7 +18,6 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
 using System;
 
 namespace PixelVision8.Player
@@ -147,8 +146,8 @@ namespace PixelVision8.Player
             {
                 tmpX = viewport.Value.X;
                 tmpY = viewport.Value.Y;
-                tmpW = viewport.Value.Width;
-                tmpH = viewport.Value.Height;
+                tmpW = Math.Min(viewport.Value.Width, Width);
+                tmpH = Math.Min(viewport.Value.Height, Height);
             }
             else
             {
@@ -180,7 +179,7 @@ namespace PixelVision8.Player
             var newWidth = (int) (tmpW * scale);
             var newHeight = (int) (tmpH * scale);
 
-            var destPixels = scale > 1 ? ResizePixels(srcPixels, tmpW, tmpH, newWidth, newHeight) : srcPixels;
+            var destPixels = ResizePixels(srcPixels, tmpW, tmpH, newWidth, newHeight);
 
             gameChip.DrawPixels(destPixels, x, y, newWidth, newHeight, false, false, drawMode, colorOffset);
         }
@@ -195,10 +194,11 @@ namespace PixelVision8.Player
 
         public void Clear(int colorRef = -1, int x = 0, int y = 0, int? width = null, int? height = null)
         {
+            
             if (width.HasValue || height.HasValue)
             {
-                var tmpWidth = width ?? 1;
-                var tmpHeight = height ?? 1;
+                var tmpWidth = Math.Max(1, width ?? 1);
+                var tmpHeight = Math.Max(1, height ?? 1);
 
                 var tmpPixels = new int[tmpWidth * tmpHeight];
 
@@ -235,6 +235,8 @@ namespace PixelVision8.Player
         }
 
 
+        // TODO Make sure there is a SetPixels where you can pass in coordinates 
+        
         public void Draw()
         {
             if (Invalid == false)

@@ -22,12 +22,15 @@ using Microsoft.Xna.Framework;
 using PixelVision8.Player;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using PixelVision8.Runner;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class ColorPaletteExporter : IExporter
     {
-        protected Color[] colors;
+        protected ColorData[] colors;
         protected PixelDataExporter exporter;
 
         protected string fullFileName;
@@ -98,7 +101,7 @@ namespace PixelVision8.Runner.Exporters
 
         public virtual void ConfigureColors()
         {
-            colors = DisplayTarget.ConvertColors(colorChip.HexColors, colorChip.MaskColor, true);
+            colors = ColorUtils.ConvertColors(colorChip.HexColors, colorChip.MaskColor, true).Select(c=> new ColorData(c.R, c.G, c.B)).ToArray();
             //
             // colorChip.colors;
             total = colors.Length;

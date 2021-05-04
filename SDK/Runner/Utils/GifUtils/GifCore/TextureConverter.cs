@@ -21,7 +21,6 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
 using System;
 
 namespace PixelVision8.Runner.Gif
@@ -34,7 +33,7 @@ namespace PixelVision8.Runner.Gif
         /// <summary>
         /// /// Apply master palette to convert true color image to 256-color image.
         /// </summary>
-        public static void ConvertTo8Bits(ref Texture2D texture, MasterPalette palette)
+        public static void ConvertTo8Bits(ref GifTexture2D texture, MasterPalette palette)
         {
             if (palette == MasterPalette.DontApply) return;
 
@@ -46,12 +45,12 @@ namespace PixelVision8.Runner.Gif
                 {
                     if (pixels[j].A < 128)
                     {
-                        pixels[j] = new Color();
+                        pixels[j] = new ColorData();
                     }
                     else
                     {
                         var brightness = (byte) (0.2126 * pixels[j].R + 0.7152 * pixels[j].G + 0.0722 * pixels[j].B);
-                        var color = new Color(brightness, brightness, brightness, Convert.ToByte(255));
+                        var color = new ColorData(brightness, brightness, brightness);
 
                         pixels[j] = color;
                     }
@@ -70,7 +69,7 @@ namespace PixelVision8.Runner.Gif
                     var g = (byte) (pixels[j].G / dividers[1] * dividers[1]);
                     var b = (byte) (pixels[j].B / dividers[2] * dividers[2]);
                     var a = (byte) (pixels[j].A < 128 ? 0 : 255);
-                    var color = a == 0 ? new Color() : new Color(r, g, b, a);
+                    var color = a == 0 ? new ColorData() : new ColorData(r, g, b, a);
 
                     pixels[j] = color;
                 }

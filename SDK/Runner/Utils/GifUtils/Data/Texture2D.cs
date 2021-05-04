@@ -30,7 +30,7 @@ namespace PixelVision8.Runner.Gif
     /// <summary>
     /// Stub for Texture2D from UnityEngine.CoreModule
     /// </summary>
-    public class Texture2D
+    public class GifTexture2D
     {
         // ReSharper disable once InconsistentNaming (original naming saved)
         public readonly int width;
@@ -38,20 +38,20 @@ namespace PixelVision8.Runner.Gif
         // ReSharper disable once InconsistentNaming (original naming saved)
         public readonly int height;
 
-        private Color[] _pixels;
+        private ColorData[] _pixels;
 
-        public Texture2D(int width, int height)
+        public GifTexture2D(int width, int height)
         {
             this.width = width;
             this.height = height;
         }
 
-        public void SetPixels32(Color[] pixels)
+        public void SetPixels32(ColorData[] pixels)
         {
             _pixels = pixels.ToArray();
         }
 
-        public Color[] GetPixels32()
+        public ColorData[] GetPixels32()
         {
             return _pixels.ToArray();
         }

@@ -24,8 +24,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     /// <summary>
     ///     Leverage the built in sprite parser to do the cutting up and indexing work for us
@@ -45,8 +46,8 @@ namespace PixelVision8.Runner.Exporters
         {
             // Get the total number of sprites
             //TODO this needs to be double checked at different size sprites
-            var cols = (int)Math.Floor((double)ImageData.Width / SpriteChip.DefaultSpriteSize);
-            var rows = (int)Math.Floor((double)ImageData.Height / SpriteChip.DefaultSpriteSize);
+            var cols = (int)Math.Floor((double)ImageData.Width / Constants.SpriteSize);
+            var rows = (int)Math.Floor((double)ImageData.Height / Constants.SpriteSize);
             totalSpritesInTexture = cols * rows;
 
             ids = Enumerable.Repeat(-1, totalSpritesInTexture).ToArray();

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 
 namespace PixelVision8.Runner
@@ -40,7 +41,10 @@ namespace PixelVision8.Runner
         public virtual void ConfigureDisplayTarget()
         {
             // Create the default display target
-            DisplayTarget = new DisplayTarget(Graphics, 512, 480);
+            DisplayTarget = new DisplayTarget(512, 480)
+            {
+                GraphicsManager = Graphics
+            };
         }
 
         public void InvalidateResolution()
@@ -69,7 +73,7 @@ namespace PixelVision8.Runner
 
             // Now it's time to call the PixelVisionEngine's Draw() method. This Draw() call propagates throughout all of the Chips that have 
             // registered themselves as being able to draw such as the GameChip and the DisplayChip.
-
+            
             // Only call draw if the window has focus
             if (RunnerActive) ActiveEngine.Draw();
 
@@ -86,14 +90,15 @@ namespace PixelVision8.Runner
                 ActiveEngine.ColorChip.ResetValidation();
             }
 
-            DisplayTarget.Render(ActiveEngine.DisplayChip.Pixels, ActiveEngine.ColorChip.BackgroundColor);
-
-            // displayTarget.spriteBatch.End();
             if (_resolutionInvalid)
             {
                 ResetResolution();
                 ResetResolutionValidation();
             }
+            
+            DisplayTarget.Render(ActiveEngine.DisplayChip.Pixels);
+
+            
         }
     }
 }

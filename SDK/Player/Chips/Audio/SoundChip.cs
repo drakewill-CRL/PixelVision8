@@ -19,10 +19,6 @@
 //
 
 using System;
-using System.Collections.Generic;
-using Microsoft.Xna.Framework;
-using PixelVision8.Player;
-using PixelVision8.Player.Audio;
 
 namespace PixelVision8.Player
 {
@@ -31,8 +27,9 @@ namespace PixelVision8.Player
     ///     The <see cref="SfxrSoundChip" /> is responsible for playing back sound
     ///     effects in the engine. It's powered by SFxr.
     /// </summary>
-    public class SoundChip : AbstractChip
+    public partial class SoundChip : AbstractChip
     {
+        
         // private readonly Dictionary<string, byte[]> _soundBank = new Dictionary<string, byte[]>();
         protected SoundChannel[] Channels = new SoundChannel[0];
         protected SoundData[] Sounds;
@@ -46,7 +43,7 @@ namespace PixelVision8.Player
             get => Channels.Length;
             set
             {
-                value = MathHelper.Clamp(value, 1, 5);
+                value = Utilities.Clamp(value, 1, 5);
                 Array.Resize(ref Channels, value);
                 
                 // There should never be an empty sound channel so loop through them and make sure one is created
@@ -65,7 +62,7 @@ namespace PixelVision8.Player
             set
             {
                 // TODO need to copy over existing sounds
-                value = MathHelper.Clamp(value, 1, 96);
+                value = Utilities.Clamp(value, 1, 96);
 
                 Array.Resize(ref Sounds, value);
 
@@ -121,7 +118,7 @@ namespace PixelVision8.Player
             if (index < 0 || index >= Sounds.Length || Sounds[index] == null) 
                 return;
             
-            channelId = MathHelper.Clamp(channelId, 0, TotalChannels - 1);
+            channelId = Utilities.Clamp(channelId, 0, TotalChannels - 1);
 
             Channels[channelId].Play(Sounds[index], frequency);
 
@@ -157,7 +154,7 @@ namespace PixelVision8.Player
         
         public bool IsChannelPlaying(int channelId)
         {
-            return Channels[channelId] != null && Channels[channelId].Playing;
+            return Channels[channelId] != null && Channels[channelId].IsPlaying();
         }
 
         public void StopSound(int channel)
@@ -183,7 +180,7 @@ namespace PixelVision8.Player
         public override void Shutdown()
         {
             foreach (var channel in Channels)
-                if (channel.Playing)
+                if (channel.IsPlaying())
                     channel.Stop();
 
             base.Shutdown();

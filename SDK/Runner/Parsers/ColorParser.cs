@@ -1,4 +1,4 @@
-﻿//   
+//   
 // Copyright (c) Jesse Freeman, Pixel Vision 8. All rights reserved.  
 //  
 // Licensed under the Microsoft Public License (MS-PL) except for a few
@@ -18,7 +18,6 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
 using PixelVision8.Player;
 using System.Collections.Generic;
 
@@ -26,27 +25,25 @@ namespace PixelVision8.Runner
 {
     public class ColorParser : ImageParser
     {
-        protected readonly List<Color> colors = new List<Color>();
+        private readonly List<ColorData> _colors = new List<ColorData>();
 
-        // protected readonly bool unique;
+        private readonly ColorChip _colorChip;
 
-        protected ColorChip colorChip;
-
-        protected Color magenta;
-        protected Color tmpColor;
-        protected int totalColors;
+        private readonly ColorData _magenta;
+        private ColorData _tmpColor;
+        private int _totalColors;
 
         public ColorParser(string sourceFile, IImageParser parser, ColorChip colorChip) : base(parser)
         {
             SourcePath = sourceFile;
-            this.colorChip = colorChip;
+            this._colorChip = colorChip;
             // unique = colorChip.unique;
-            magenta = DisplayTarget.HexToColor(colorChip.MaskColor);
+            _magenta = new ColorData(colorChip.MaskColor);
         }
 
         public override void CalculateSteps()
         {
-            colorChip.Clear();
+            _colorChip.Clear();
 
             base.CalculateSteps();
 
@@ -67,27 +64,27 @@ namespace PixelVision8.Runner
             for (var i = 0; i < total; i++)
             {
                 // Get the current color
-                tmpColor = srcColors[i]; //pixels[i]);
+                _tmpColor = srcColors[i]; //pixels[i]);
 
-                if (tmpColor.A < 1) // && !ignoreTransparent)
-                    tmpColor = magenta;
+                if (_tmpColor.A < 1) // && !ignoreTransparent)
+                    _tmpColor = _magenta;
 
-                colors.Add(tmpColor);
+                _colors.Add(_tmpColor);
             }
 
-            totalColors = colors.Count;
+            _totalColors = _colors.Count;
 
             CurrentStep++;
         }
 
         public void UpdateColors()
         {
-            for (var i = 0; i < totalColors; i++)
+            for (var i = 0; i < _totalColors; i++)
             {
-                var tmpColor = colors[i];
-                var hex = SpriteImageParser.RgbToHex(tmpColor.R, tmpColor.G, tmpColor.B);
+                var tmpColor = _colors[i];
+                var hex = ColorUtils.RgbToHex(tmpColor);
 
-                colorChip.UpdateColorAt(i, hex);
+                _colorChip.UpdateColorAt(i, hex);
             }
 
             CurrentStep++;

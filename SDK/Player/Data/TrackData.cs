@@ -18,11 +18,7 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
-using PixelVision8.Runner;
 using System;
-using System.Linq;
-using System.Text;
 
 namespace PixelVision8.Player
 {
@@ -67,7 +63,7 @@ namespace PixelVision8.Player
         public int totalNotes
         {
             get => notes.Length;
-            set => Array.Resize(ref notes, MathHelper.Clamp(value, 0, maxNotes));
+            set => Array.Resize(ref notes, Utilities.Clamp(value, 0, maxNotes));
         }
 
         /// <summary>
@@ -87,28 +83,7 @@ namespace PixelVision8.Player
         {
             for (var i = 0; i < totalNotes; i++) notes[i] = 0;
         }
-
-        public string SerializeData()
-        {
-            var sb = new StringBuilder();
-            JsonUtil.GetLineBreak(sb);
-            sb.Append("{");
-            JsonUtil.GetLineBreak(sb, 1);
-
-            sb.Append("\"SfxId\":");
-            sb.Append(sfxID);
-            sb.Append(",");
-            JsonUtil.GetLineBreak(sb, 1);
-
-            sb.Append("\"notes\":[");
-
-            sb.Append(string.Join(",", notes.Select(x => x.ToString()).ToArray()));
-            sb.Append("]");
-
-            JsonUtil.GetLineBreak(sb);
-            sb.Append("}");
-
-            return sb.ToString();
-        }
+        
+        
     }
 }

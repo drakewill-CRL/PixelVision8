@@ -21,8 +21,9 @@
 using PixelVision8.Player;
 using PixelVision8.Runner;
 using System.Text;
+using PixelVision8.Runner.Exporters;
 
-namespace PixelVision8.Runner.Exporters
+namespace PixelVision8.Editor
 {
     public class SoundExporter : AbstractExporter
     {
@@ -52,7 +53,7 @@ namespace PixelVision8.Runner.Exporters
 
         private void SaveGameData()
         {
-            var soundChip = _targetPlay.SoundChip as SfxrSoundChip;
+            var soundChip = _targetPlay.SoundChip;
 
             sb.Append("\"version\":\"v2\",");
             JsonUtil.GetLineBreak(sb, 1);

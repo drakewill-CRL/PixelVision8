@@ -18,8 +18,6 @@
 // Shawn Rakowski - @shwany
 //
 
-using Microsoft.Xna.Framework;
-
 namespace PixelVision8.Player
 {
     
@@ -28,8 +26,8 @@ namespace PixelVision8.Player
         // TODO this shares tmpSpriteData with GameChip_Display
 
         protected SpriteChip SpriteChip => Player.SpriteChip;
-        protected int SpriteWidth = SpriteChip.DefaultSpriteSize;
-        protected int SpriteHeight = SpriteChip.DefaultSpriteSize;
+        protected int SpriteWidth = Constants.SpriteSize;
+        protected int SpriteHeight = Constants.SpriteSize;
         
         private int[] _tmpSpriteData = new int[64];
 
@@ -44,8 +42,8 @@ namespace PixelVision8.Player
         
         public void ChangeSizeMode(SpriteSizes mode)
         {
-            SpriteWidth = _spriteSizes[(int) mode].X * SpriteChip.DefaultSpriteSize;
-            SpriteHeight = _spriteSizes[(int) mode].Y * SpriteChip.DefaultSpriteSize;
+            SpriteWidth = _spriteSizes[(int) mode].X * Constants.SpriteSize;
+            SpriteHeight = _spriteSizes[(int) mode].Y * Constants.SpriteSize;
         }
 
         /// <summary>
@@ -94,8 +92,8 @@ namespace PixelVision8.Player
         public int PaletteOffset(int paletteId, int paletteColorId = 0)
         {
             // TODO this is hardcoded right now but there are 8 palettes with a max of 16 colors each
-            return 128 + MathHelper.Clamp(paletteId, 0, 7) * 16 +
-                   MathHelper.Clamp(paletteColorId, 0, ColorsPerSprite() - 1);
+            return 128 + Utilities.Clamp(paletteId, 0, 7) * 16 +
+                   Utilities.Clamp(paletteColorId, 0, ColorsPerSprite() - 1);
         }
 
         #region Sprite

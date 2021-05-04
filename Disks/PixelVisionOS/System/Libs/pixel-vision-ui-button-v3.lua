@@ -25,6 +25,8 @@ function EditorUI:CreateButton(rect, spriteName, toolTip, forceDraw)
   data.doubleClickDelay = .45
   data.doubleClickActive = false
 
+  data.drawMode = DrawMode.TilemapCache
+
   data.buttonCursor = 2
 
   -- By default, we don't want buttons to redraw the background
@@ -76,9 +78,9 @@ function EditorUI:UpdateButtonSizeFromCache(data)
   local spriteData = -1
 
   -- Get the default sprite data for the button
-  if(data.cachedSpriteData ~= nil) then
+  if(data.cachedMetaSpriteIds ~= nil) then
 
-    spriteData = FindMetaSpriteId(data.cachedSpriteData.up or data.cachedSpriteData.disabled)
+    spriteData = data.cachedMetaSpriteIds.up or data.cachedMetaSpriteIds.disabled
 
   end
 
@@ -96,9 +98,9 @@ function EditorUI:UpdateButtonSizeFromCache(data)
     data.rect.h = data.tiles.h * self.spriteSize.y
 
     -- Cache the tile draw arguments for rendering
-    data.spriteDrawArgs = {spriteData, 0, 0, false, false, DrawMode.Sprite, 0, false, false}
-    data.tileDrawArgs = {spriteData, data.rect.x, data.rect.y, false, false, DrawMode.TilemapCache, 0}
-    data.bgDrawArgs = {data.rect.x, data.rect.y, data.rect.w, data.rect.h, BackgroundColor(), DrawMode.TilemapCache}
+    -- data.spriteDrawArgs = {spriteData, 0, 0, false, false, DrawMode.Sprite, 0, false, false}
+    -- data.tileDrawArgs = {spriteData, data.rect.x, data.rect.y, false, false, DrawMode.TilemapCache, 0}
+    -- data.bgDrawArgs = {data.rect.x, data.rect.y, data.rect.w, data.rect.h, BackgroundColor(), DrawMode.TilemapCache}
 
   end
 
@@ -167,23 +169,13 @@ function EditorUI:UpdateButton(data, hitRect)
       self.tmpState = "selected" .. self.tmpState
     end
 
-    local spriteData = data.cachedSpriteData ~= nil and data.cachedSpriteData[self.tmpState] or nil
+    local spriteData = data.cachedMetaSpriteIds ~= nil and data.cachedMetaSpriteIds[self.tmpState] or nil
 
-    if(spriteData ~= nil and data.spriteDrawArgs ~= nil) then
+    if(spriteData ~= nil) then-- and data.spriteDrawArgs ~= nil) then
 
-      -- Sprite Data
-      data.spriteDrawArgs[1] = FindMetaSpriteId(spriteData)--.spriteIDs
+      DrawMetaSprite(spriteData, data.rect.x, data.rect.y, false, false, DrawMode.UI)
 
-      -- X pos
-      data.spriteDrawArgs[2] = data.rect.x
-
-      -- Y pos
-      data.spriteDrawArgs[3] = data.rect.y
-
-      -- Color Offset
-      data.spriteDrawArgs[8] = spriteData.colorOffset or 0
-
-      self:NewDraw("DrawMetaSprite", data.spriteDrawArgs)
+      
 
     end
 
@@ -243,35 +235,37 @@ function EditorUI:RedrawButton(data, stateOverride)
       end
 
       -- Test to see if the button is disabled. If there is a disabled sprite data, we'll change the state to disabled. By default, always use the up state.
-      if(data.enabled == false and data.cachedSpriteData["disabled"] ~= nil and data.selected ~= true) then --_G[spriteName .. "disabled"] ~= nil) then
+      if(data.enabled == false and data.cachedMetaSpriteIds["disabled"] ~= nil and data.selected ~= true) then --_G[spriteName .. "disabled"] ~= nil) then
         self.tmpState = "disabled"
       end
 
     end
 
     -- Test to see if the sprite data exist before updating the tiles
-    if(data.cachedSpriteData ~= nil and data.cachedSpriteData[self.tmpState] ~= nil and data.tileDrawArgs ~= nil) then
-
-      -- Update the tile draw arguments
-      data.tileDrawArgs[1] = FindMetaSpriteId(data.cachedSpriteData[self.tmpState])--.spriteIDs
-
-      -- Color offset
-      data.tileDrawArgs[8] = data.cachedSpriteData[self.tmpState].colorOffset or 0
+    if(data.cachedMetaSpriteIds ~= nil and data.cachedMetaSpriteIds[self.tmpState] ~= nil) then-- and data.tileDrawArgs ~= nil) then
 
       if(data.redrawBackground == true) then
 
-        -- Make sure we always have the current BG color
-        data.bgDrawArgs[5] = data.bgColorOverride ~= nil and data.bgColorOverride or BackgroundColor()
-
-        self:NewDraw("DrawRect", data.bgDrawArgs)
-
+        DrawRect( data.rect.x, data.rect.y, data.rect.w, data.rect.h, data.bgColorOverride ~= nil and data.bgColorOverride or BackgroundColor(), DrawMode.TilemapCache)
+        
       end
 
-      self:NewDraw("DrawMetaSprite", data.tileDrawArgs)
-
+      DrawMetaSprite(
+        data.cachedMetaSpriteIds[self.tmpState], 
+        data.rect.x, 
+        data.rect.y, 
+        false, 
+        false, 
+        data.drawMode, 
+        0
+      )
+      
     end
 
-    self:ResetValidation(data)
+    -- If we are drawing the button into the tilemap we can reset the validation so it doesn't draw on the next frame
+    if(data.drawMode == DrawMode.TilemapCache or data.drawMode == DrawMode.Tile) then
+      self:ResetValidation(data)
+    end
 
   end
 
@@ -282,24 +276,22 @@ function EditorUI:ClearButton(data, flag)
   -- We want to clear the flag if no value is supplied
   flag = flag or - 1
 
-  if(data.cachedSpriteData == nil) then
+  if(data.cachedMetaSpriteIds == nil) then
     return
   end
-
-  -- Get the cached empty sprite data
-  -- self.tmpSpriteData = data.cachedSpriteData["empty"]
 
   -- make sure we have sprite data to draw
   if(self.tmpSpriteData ~= nil) then
 
-    -- Update the tile draw arguments
-    data.tileDrawArgs[1] = FindMetaSpriteId(data.cachedSpriteData["empty"])--.spriteIDs
-
-    -- Color offset
-    data.tileDrawArgs[8] = self.tmpSpriteData.colorOffset or 0
-
-    self:NewDraw("DrawMetaSprite", data.tileDrawArgs)
-
+    DrawMetaSprite(
+        data.cachedMetaSpriteIds["empty"], 
+        data.rect.x, 
+        data.rect.y, 
+        false, 
+        false, 
+        DrawMode.TilemapCache, 0
+      )
+    
   end
 
 end
